@@ -31,7 +31,10 @@ class connect_unity:
     def execute_step():
         """
         toss the action to simulation
-        action의 모양은 주어진 박스만큼 줄건데 이건 추후에
-        제미나이로 돌려서  확인
         """
     
+    def get_result_episode():
+        """
+        선반이 다찬게 1에피소드
+        1에피소드 동안의 [박스별 time, utilized space, left space] 반환
+        """
