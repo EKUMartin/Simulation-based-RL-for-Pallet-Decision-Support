@@ -24,7 +24,7 @@ class connect_unity:
     
     def get_result():
         """
-        time, space utilized, free space, distance traveled
+        time, distance traveled
         output:[box1,box2, box3]
         """
 
