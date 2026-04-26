@@ -21,8 +21,8 @@ def train():
     shelf_width = env.shelf[0]
     shelf_length = env.shelf[1]
     grid_area = shelf_width * shelf_length
-    
-    input_size = (grid_area * 2) + grid_area + 3
+    box_info_size = 3 + 6
+    input_size = (grid_area * 2) + grid_area + box_info_size
     output_size = grid_area * 2
     
     model = ActorCritic(grid_h=shelf_length, grid_w=shelf_width, output_size=output_size).to(device)
@@ -33,7 +33,7 @@ def train():
     eps_clip = 0.2
     k_epochs = 10
     batch_size = 64
-    ent_coef=0.03
+    ent_coef=0.001
     agent = PPOAgent(model, lr, gamma, gae_lambda, eps_clip, k_epochs, ent_coef,device=device, batch_size=batch_size)
     memory = Memory()
     
@@ -50,13 +50,13 @@ def train():
             timestep += 1
             # episode_steps += 1
             box = env.boxes[env.current_box]
+            rem_stats = env.get_remaining_stats()
+            norm_box_info = np.array([box[0]/shelf_width, box[1]/shelf_length, box[2]/10.0])
+            combined_box_data = np.concatenate((norm_box_info, rem_stats))
+
             flat_state = np.array(env.current_state).flatten()
             flat_fm = np.array(feasibility_map).flatten()
-            norm_box_w = box[0] / shelf_width
-            norm_box_h = box[1] / shelf_length
-            norm_box_weight = box[2] / 10.0
-            box_info = np.array([norm_box_w, norm_box_h, norm_box_weight])
-            combined_state = np.concatenate((flat_state, flat_fm, box_info))
+            combined_state = np.concatenate((flat_state, flat_fm, combined_box_data))
             
             state_tensor = torch.FloatTensor(combined_state).to(device)
             fm_tensor = torch.FloatTensor(flat_fm).to(device)
@@ -92,10 +92,12 @@ def train():
                         norm_n_box_w = next_box[0] / shelf_width
                         norm_n_box_h = next_box[1] / shelf_length
                         norm_n_box_weight = next_box[2] / 10.0
-                        n_box_info = np.array([norm_n_box_w, norm_n_box_h, norm_n_box_weight])
-
+                        norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h, norm_n_box_weight])
+                        n_rem_stats = env.get_remaining_stats()
                         
-                        n_combined = np.concatenate((n_flat_state, n_flat_fm, n_box_info))
+                        n_combined_box_data = np.concatenate((norm_n_box_info, n_rem_stats))
+                        n_combined = np.concatenate((n_flat_state, n_flat_fm, n_combined_box_data))
+                        
                         n_state_tensor = torch.FloatTensor(n_combined).to(device)
                         n_fm_tensor = torch.FloatTensor(n_flat_fm).to(device)
                         
@@ -125,7 +127,7 @@ def train():
     #     print(f"📊 학습 로그 엑셀 저장 완료: {excel_path}")
     # except Exception as e:
     #     print(f"엑셀 저장 중 오류 발생 (openpyxl 라이브러리가 설치되어 있는지 확인하세요): {e}")
-    window_size = 50 
+    window_size = 10
     moving_avg = pd.Series(reward_history).rolling(window=window_size, min_periods=1).mean()
 
     plt.figure(figsize=(10, 6)) # 그래프 크기를 약간 키워줍니다.

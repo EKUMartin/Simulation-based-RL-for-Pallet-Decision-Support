@@ -14,17 +14,17 @@ class ActorCritic(nn.Module):
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.ReLU()
         )
-        
+        self.box_info_dim = 9
 
         self.actor_head = nn.Sequential(
-            nn.Conv2d(67, 32, kernel_size=1),
+            nn.Conv2d(64 + self.box_info_dim, 32, kernel_size=1),
             nn.ReLU(),
             nn.Conv2d(32, 2, kernel_size=1) # 채널 0:회전X, 채널 1:90도 회전
         )
         
         self.critic_pool = nn.AdaptiveAvgPool2d(1)
         self.critic_linear = nn.Sequential(
-            nn.Linear(64 + 3, 128),
+            nn.Linear(64 + self.box_info_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 1)
         )
@@ -49,7 +49,7 @@ class ActorCritic(nn.Module):
         spatial_features = self.feature_extractor(grid_data) # (Batch, 64, H, W)
 
         # (Batch, 3) -> (Batch, 3, H, W)
-        box_info_spatial = box_info.view(-1, 3, 1, 1).expand(-1, 3, self.h, self.w)
+        box_info_spatial = box_info.view(-1, 9, 1, 1).expand(-1, 9, self.h, self.w)
         
 
         actor_input = torch.cat((spatial_features, box_info_spatial), dim=1)

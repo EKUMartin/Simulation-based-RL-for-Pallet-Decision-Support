@@ -29,7 +29,7 @@ class Environment:
         self.packed_boxes.append(self.boxes[self.current_box])
         box = self.boxes[self.current_box]
         self.action_history.append(action)
-        step_reward = (box[0] * box[1]) * 0.1#박스를 뒀을 때 보상 추가
+        step_reward = (box[0] * box[1]) * 0.001#박스를 뒀을 때 보상 추가
         self.current_box+=1
         
 
@@ -91,11 +91,12 @@ class Environment:
         space_utilized=(space==1).sum()
         total_size=0
         if self.done:
+            print("####################실패!####################")
             for i in range(total_boxes-self.current_box):
                 width=self.boxes[self.current_box+i][0]
                 length=self.boxes[self.current_box+i][1]
                 total_size+=width*length
-            penalty=space_left-total_size
+            penalty=space_left-total_size+50
             return -penalty*0.5
         
         else:
@@ -187,3 +188,23 @@ class Environment:
         state=np.array(self.current_state)
         state[y:y+box_h,x:x+box_w]=1
         self.current_state=state
+    def get_remaining_stats(self):
+        remaining_boxes = self.boxes[self.current_box+1:] 
+        if not remaining_boxes:
+            return np.zeros(6)
+
+        count = len(remaining_boxes)
+        widths = [b[0] for b in remaining_boxes]
+        lengths = [b[1] for b in remaining_boxes]
+        weights = [b[2] for b in remaining_boxes]
+        total_area = sum([w * l for w, l in zip(widths, lengths)])
+        
+        # 통계치 계산 (정규화 포함)
+        avg_w = np.mean(widths) / self.shelf[0]
+        avg_l = np.mean(lengths) / self.shelf[1]
+        max_w = np.max(widths) / self.shelf[0]
+        max_l = np.max(lengths) / self.shelf[1]
+        total_area_ratio = total_area / (self.shelf[0] * self.shelf[1])
+        rem_count_ratio = count /len(self.boxes)
+
+        return np.array([avg_w, avg_l, max_w, max_l, total_area_ratio, rem_count_ratio])
