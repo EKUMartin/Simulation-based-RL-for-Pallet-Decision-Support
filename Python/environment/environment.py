@@ -84,8 +84,8 @@ class Environment:
         에피소드가 종료 됐을 때 보상 또는 페널티 제공
         unity 연결 함수에서 받음
         """
-        _,information,boxes=cu.get_observation()
-        space=np.array(information)
+        # _,information,boxes=cu.get_observation()
+        space=np.array(self.current_state)
         total_boxes=len(self.boxes)
         space_left=(space==0).sum()
         space_utilized=(space==1).sum()
@@ -127,7 +127,7 @@ class Environment:
         sorted_weight=np.sort(weights)
         for w,d in zip(sorted_weight,sorted_distance):
             worst_case+=w/(d+1e-9)
-        diff=worst_case-performance
+        diff=performance-worst_case
         penalty=self.penalty_threshold*worst_case
         if diff>=penalty:
             return diff*0.5
