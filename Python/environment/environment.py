@@ -16,7 +16,7 @@ class Environment:
        self.current_feasibility_map=[]
        self.action_history = []
        self.packed_boxes = []
-       self.history_boxes=[]
+       self.history_boxes
        self.done=False
        self.penalty_threshold=penalty_threshold
     
@@ -27,16 +27,13 @@ class Environment:
         """
         self.update_state(action)
         self.packed_boxes.append(self.boxes[self.current_box])
-        box = self.boxes[self.current_box]
         self.action_history.append(action)
-        step_reward = (box[0] * box[1]) * 0.1#박스를 뒀을 때 보상 추가
         self.current_box+=1
-        
+        step_reward=0
 
         if self.current_box >= len(self.boxes):
             cu.execute_step(self.action_history)
-            batch_reward = self.get_stepwise_reward()
-            step_reward += batch_reward
+            step_reward=self.get_stepwise_reward()
             self.shelf, self.current_state, self.boxes = cu.get_observation()
             self.current_box = 0
             self.action_history = []
@@ -51,7 +48,7 @@ class Environment:
         
         if self.done:
             terminal_reward=self.get_terminal_reward()
-            return self.current_state, self.current_feasibility_map, step_reward + terminal_reward, self.done    
+            return self.current_state, self.current_feasibility_map, terminal_reward, self.done    
         
         return self.current_state, self.current_feasibility_map, step_reward, self.done
     def reset(self):
@@ -96,7 +93,7 @@ class Environment:
                 length=self.boxes[self.current_box+i][1]
                 total_size+=width*length
             penalty=space_left-total_size
-            return penalty*0.5
+            return penalty
         
         else:
             time=cu.get_result_episode()
@@ -105,7 +102,7 @@ class Environment:
             total_time=np.sum(time_array)+1e-9
             avg_weight=np.average(weight)+1e-9
             reward=(space_utilized-space_left)/(total_time/avg_weight)
-            return reward*0.5
+            return reward
 
     
     def get_stepwise_reward(self):
@@ -129,9 +126,9 @@ class Environment:
         diff=worst_case-performance
         penalty=self.penalty_threshold*worst_case
         if diff>=penalty:
-            return diff*0.5
+            return np.log(diff) 
         else:
-            return -penalty*0.5
+            return -np.log(penalty)
      
 
 
