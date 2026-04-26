@@ -96,7 +96,7 @@ class Environment:
                 width=self.boxes[self.current_box+i][0]
                 length=self.boxes[self.current_box+i][1]
                 total_size+=width*length
-            penalty=space_left-total_size+50
+            penalty=space_left-total_size
             return -penalty*0.5
         
         else:
