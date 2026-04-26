@@ -96,7 +96,7 @@ class Environment:
                 length=self.boxes[self.current_box+i][1]
                 total_size+=width*length
             penalty=space_left-total_size
-            return penalty*0.5
+            return -penalty*0.5
         
         else:
             time=cu.get_result_episode()

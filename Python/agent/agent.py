@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 class PPOAgent:
-    def __init__(self,model,lr,gamma,gae_lambda,eps_clip, k_epochs, ent_coef=0.01, device='cpu', vf_coef=0.5, batch_size=128):
+    def __init__(self,model,lr,gamma,gae_lambda,eps_clip, k_epochs, ent_coef=0.03, device='cpu', vf_coef=0.5, batch_size=128):
         self.model = model.to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.gamma = gamma
