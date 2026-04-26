@@ -108,6 +108,7 @@ class PPOAgent:
 
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)
                 self.optimizer.step()
+        return pg_loss.item(), v_loss.item()
 
 
 
@@ -130,3 +131,4 @@ class Memory:
         del self.rewards[:]
         del self.feasibility_maps[:]
         del self.is_terminals[:]
+        del self.values[:]
