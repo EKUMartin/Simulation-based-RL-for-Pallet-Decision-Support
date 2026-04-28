@@ -29,14 +29,14 @@ class Environment:
         self.packed_boxes.append(self.boxes[self.current_box])
         box = self.boxes[self.current_box]
         self.action_history.append(action)
-        step_reward = (box[0] * box[1]) * 0.001#박스를 뒀을 때 보상 추가
+        step_reward = (box[0] * box[1]) * 0.03#박스를 뒀을 때 보상 추가
         self.current_box+=1
         
 
         if self.current_box >= len(self.boxes):
             cu.execute_step(self.action_history)
-            batch_reward = self.get_stepwise_reward()
-            step_reward += batch_reward
+            # batch_reward = self.get_stepwise_reward()
+            # step_reward += batch_reward
             self.shelf, self.current_state, self.boxes = cu.get_observation()
             self.current_box = 0
             self.action_history = []
@@ -100,12 +100,13 @@ class Environment:
             return -penalty*0.5
         
         else:
-            time=cu.get_result_episode()
-            weight=np.array([box[2] for box in self.packed_boxes])
-            time_array=np.array([t[0] for t in time])
-            total_time=np.sum(time_array)+1e-9
-            avg_weight=np.average(weight)+1e-9
-            reward=(space_utilized-space_left)/(total_time/avg_weight)
+            # time=cu.get_result_episode()
+            # weight=np.array([box[2] for box in self.packed_boxes])
+            # time_array=np.array([t[0] for t in time])
+            # total_time=np.sum(time_array)+1e-9
+            # avg_weight=np.average(weight)+1e-9
+            # reward=(space_utilized-space_left)/(total_time/avg_weight)
+            reward=space_utilized-space_left
             return reward*0.5
 
     
@@ -113,27 +114,26 @@ class Environment:
         """
         모든 상자가 다 끝났을 때 다음 observation이 오기전에 reward 계산
         """
-        step_result=cu.get_result()
-        performance=0
-        worst_case=0
-        distances=[]
-        weights=[]
-        for i,j in zip(step_result,self.boxes):
-            distance,weight=i[3],j[2]
-            distances.append(distance)
-            weights.append(weight)
-            performance+=weight/(distance+1e-9)
-        sorted_distance=np.sort(distances)
-        sorted_weight=np.sort(weights)
-        for w,d in zip(sorted_weight,sorted_distance):
-            worst_case+=w/(d+1e-9)
-        diff=performance-worst_case
-        penalty=self.penalty_threshold*worst_case
-        if diff>=penalty:
-            return diff*0.5
-        else:
-            return -penalty*0.5
-     
+        # step_result=cu.get_result()
+        # performance=0
+        # worst_case=0
+        # distances=[]
+        # weights=[]
+        # for i,j in zip(step_result,self.boxes):
+        #     distance,weight=i[3],j[2]
+        #     distances.append(distance)
+        #     weights.append(weight)
+        #     performance+=weight/(distance+1e-9)
+        # sorted_distance=np.sort(distances)
+        # sorted_weight=np.sort(weights)
+        # for w,d in zip(sorted_weight,sorted_distance):
+        #     worst_case+=w/(d+1e-9)
+        # diff=performance-worst_case
+        # penalty=self.penalty_threshold*worst_case
+        # if diff>=penalty:
+        #     return diff*0.5
+        # else:
+        #     return -penalty*0.5
 
 
 
@@ -196,7 +196,7 @@ class Environment:
         count = len(remaining_boxes)
         widths = [b[0] for b in remaining_boxes]
         lengths = [b[1] for b in remaining_boxes]
-        weights = [b[2] for b in remaining_boxes]
+        # weights = [b[2] for b in remaining_boxes]
         total_area = sum([w * l for w, l in zip(widths, lengths)])
         
         # 통계치 계산 (정규화 포함)
