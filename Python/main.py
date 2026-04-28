@@ -12,28 +12,29 @@ def train():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"학습 진행 장치: {device}")
     
-    env = Environment(0.8)
+    env = Environment(0.4)
     current_state, feasibility_map = env.reset()
-    # SAVE_DIR = "./checkpoints"
-    # os.makedirs(SAVE_DIR, exist_ok=True)
-    # TARGET_REWARD = 2.0
+    SAVE_DIR = "./checkpoints"
+    os.makedirs(SAVE_DIR, exist_ok=True)
+    TARGET_REWARD = 3.0
     training_logs = []
     shelf_width = env.shelf[0]
     shelf_length = env.shelf[1]
     grid_area = shelf_width * shelf_length
-    box_info_size = 3 + 6
-    input_size = (grid_area * 2) + grid_area + box_info_size
+    # box_info_size = 3 + 6
+    # box_info_size =2+6
+    # input_size = (grid_area * 2) + grid_area + box_info_size
     output_size = grid_area * 2
     
     model = ActorCritic(grid_h=shelf_length, grid_w=shelf_width, output_size=output_size).to(device)
     
-    lr = 0.0001
+    lr = 0.0003
     gamma = 0.99
     gae_lambda = 0.95
     eps_clip = 0.2
     k_epochs = 10
     batch_size = 64
-    ent_coef=0.001
+    ent_coef=0.01
     agent = PPOAgent(model, lr, gamma, gae_lambda, eps_clip, k_epochs, ent_coef,device=device, batch_size=batch_size)
     memory = Memory()
     
@@ -45,10 +46,10 @@ def train():
     for episode in range(1, max_episodes + 1):
         current_state, feasibility_map = env.reset()
         episode_reward = 0
-        # episode_steps = 0
+        episode_steps = 0
         while not env.done:
             timestep += 1
-            # episode_steps += 1
+            episode_steps += 1
             box = env.boxes[env.current_box]
             rem_stats = env.get_remaining_stats()
             norm_box_info = np.array([box[0]/shelf_width, box[1]/shelf_length, box[2]/10.0])
@@ -91,8 +92,9 @@ def train():
                         n_flat_fm = np.array(feasibility_map).flatten()
                         norm_n_box_w = next_box[0] / shelf_width
                         norm_n_box_h = next_box[1] / shelf_length
-                        norm_n_box_weight = next_box[2] / 10.0
-                        norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h, norm_n_box_weight])
+                        # norm_n_box_weight = next_box[2] / 10.0
+                        # norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h, norm_n_box_weight])
+                        norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h])
                         n_rem_stats = env.get_remaining_stats()
                         
                         n_combined_box_data = np.concatenate((norm_n_box_info, n_rem_stats))
@@ -109,24 +111,24 @@ def train():
                 print(f"  └── [Update] Timestep: {timestep} | 에피소드: {episode} | PG Loss: {pg_loss:.4f} | Value Loss: {v_loss:.4f}")
         print(f"Episode {episode}/{max_episodes} 완료 | 총 보상: {episode_reward:.2f}")
         reward_history.append(episode_reward)
-        # training_logs.append({
-        #     "Episode": episode,
-        #     "Total_Timesteps": timestep,
-        #     "Episode_Steps": episode_steps,
-        #     "Reward": episode_reward
-        # })
-        # if episode_reward >= TARGET_REWARD:
-        #     save_path = os.path.join(SAVE_DIR, f"ppo_model_ep{episode}_reward{episode_reward:.2f}.pth")
-        #     torch.save(agent.model.state_dict(), save_path)
-        #     print(f"🎉 목표 보상 달성! 모델 저장 완료: {save_path}")
+        training_logs.append({
+            "Episode": episode,
+            "Total_Timesteps": timestep,
+            "Episode_Steps": episode_steps,
+            "Reward": episode_reward
+        })
+        if episode_reward >= TARGET_REWARD:
+            save_path = os.path.join(SAVE_DIR, f"ppo_model_ep{episode}_reward{episode_reward:.2f}.pth")
+            torch.save(agent.model.state_dict(), save_path)
+            print(f"🎉 목표 보상 달성! 모델 저장 완료: {save_path}")
     
-    # try:
-    #     df_logs = pd.DataFrame(training_logs)
-    #     excel_path = "training_logs.xlsx"
-    #     df_logs.to_excel(excel_path, index=False)
-    #     print(f"📊 학습 로그 엑셀 저장 완료: {excel_path}")
-    # except Exception as e:
-    #     print(f"엑셀 저장 중 오류 발생 (openpyxl 라이브러리가 설치되어 있는지 확인하세요): {e}")
+    try:
+        df_logs = pd.DataFrame(training_logs)
+        excel_path = "training_logs.xlsx"
+        df_logs.to_excel(excel_path, index=False)
+        print(f"📊 학습 로그 엑셀 저장 완료: {excel_path}")
+    except Exception as e:
+        print(f"엑셀 저장 중 오류 발생 (openpyxl 라이브러리가 설치되어 있는지 확인하세요): {e}")
     window_size = 10
     moving_avg = pd.Series(reward_history).rolling(window=window_size, min_periods=1).mean()
 
