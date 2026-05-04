@@ -70,12 +70,12 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    //에이전트가 지정한 위치(startX, startZ)에 박스(boxSize)를 놓을 수 있는지 확인하고 점유 처리
+    //에이전트가 지정한 위치(startX, startZ)에 박스를 놓을 수 있는지 확인하고 점유 처리
     public bool TryPlaceBox(int startX, int startZ, Vector3 boxSize, out Vector3 placePosition)
     {
         placePosition = Vector3.zero;
 
-        //박스의 실제 크기를 셀 개수로 변환 (예: 0.3m / 0.1m = 3칸)
+        //박스의 실제 크기를 셀 개수로 변환 (예: 0.3m/0.1m = 3칸)
         int boxCellsX = Mathf.RoundToInt(boxSize.x / cellSize);
         int boxCellsZ = Mathf.RoundToInt(boxSize.z / cellSize);
 
@@ -108,9 +108,30 @@ public class GridManager : MonoBehaviour
         float worldX = minBounds.x + (startX * cellSize) + (boxSize.x / 2f); //box 정중앙 좌표계산
         float worldZ = minBounds.z + (startZ * cellSize) + (boxSize.z / 2f);
         //높이는 선반 바닥(y) + 박스 높이의 절반
-        float worldY = shelfCollider.bounds.max.y + (boxSize.y / 2f); //높이(y)값 계산
+        float worldY = shelfCollider.bounds.max.y + (boxSize.y / 2f); //높이 y값 계산
         
         placePosition = new Vector3(worldX, worldY, worldZ); //최종좌표
-        return true; // 배치 성공
+        return true; //배치 성공
     }
+
+    //에이전트가 Observation 수집할 때 호출할 함수: 2차원 grid를 1차원 배열로 변환
+    public float[] GetGridData()
+    {
+        //그리드의 전체 칸 수만큼 빈 1차원 배열을 만듬
+        float[] gridtoarray = new float[gridWidth * gridDepth];
+        int index = 0;
+
+        //2차원 배열을 순회하면서 1차원 배열에 1을 채움
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int z = 0; z < gridDepth; z++)
+            {
+                gridtoarray[index] = gridMap[x, z]; //0.0: 빈 공간 또는 1.0: 박스 있음
+                index++;
+            }
+        }
+
+        return gridtoarray;
+    }
+
 }
