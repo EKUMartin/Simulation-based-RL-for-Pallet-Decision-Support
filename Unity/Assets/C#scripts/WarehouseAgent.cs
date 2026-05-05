@@ -2,7 +2,7 @@ using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
 using Unity.MLAgents.Actuators;
-
+using System.Collections.Generic;
 public class WarehouseAgent : Agent
 {
     [Header("4개 층의 GridManager 연결")]
@@ -15,10 +15,16 @@ public class WarehouseAgent : Agent
     private GridManager[] allFloors;  // 4개 층을 담을 배열
 
     [Header("박스 생성 관련")]
-    public GameObject boxPrefab;
-    public Transform boxSpawnPoint;
+    public RandomBox_generator boxManager;
+    public int totalBoxesToPlace = 8;
 
-    private GameObject currentBox;
+    // 씬에 생성된 '모든 박스'를 담아두는 쓰레기통 (에피소드 리셋 시 한 번에 비우기 위함)
+    private List<GameObject> allSpawnedBoxes = new List<GameObject>();
+    // 에이전트가 배치해야 할 8개의 타겟 박스가 담긴 '대기열'
+    private List<Box> boxesToPlace = new List<Box>();
+
+    // 현재 에이전트의 손에 들려있는(배치할 차례인) 박스의 순서(인덱스)
+    private int currentBoxIndex = 0;
     private int placedBoxCount = 0;
 
     [HideInInspector] public Vector3 currentBoxSize;
@@ -32,32 +38,71 @@ public class WarehouseAgent : Agent
 
     public override void OnEpisodeBegin()
     {
-        // 4개 층 모두 그리드 초기화 및 선반 위 박스, frame 스캔 (선반 위 박스 랜덤 생성하는 코드는 아직 미완)
+        // 1. 대청소: 이전 에피소드에서 씬에 남겨진 모든 박스를 파괴하고 리스트를 비웁니다.
+        foreach (var box in allSpawnedBoxes)
+        {
+            if (box != null) Destroy(box);
+        }
+        allSpawnedBoxes.Clear();
+        boxesToPlace.Clear();
+        
+        currentBoxIndex = 0;
+        placedBoxCount = 0;
+
+        // 2. 초기 맵 세팅: 4개 층 모두 그리드 데이터를 리셋하고, 0~3개의 랜덤 박스를 미리 깔아둡니다.
         foreach (var floor in allFloors)
         {
-            floor.ScanInitialBoxes(); 
+            floor.ScanInitialBoxes(); // (이 함수 안에 기존 박스를 지우는 로직이 없다면 그리드 맵만 0으로 초기화됨)
+            SpawnInitialRandomBoxes(floor);
         }
-        
-        placedBoxCount = 0; //성공 카운트 초기화
-        
-        //쥐고 있던 박스가 있다면 제거
-        if (currentBox != null) Destroy(currentBox);
 
-        SpawnNextBox(); // 첫 번째 박스 소환
+        // 3. 타겟 박스 준비: 이번 에피소드에서 파이썬이 배치해야 할 8개의 박스를 한 번에 생성합니다. (SpawnNextBox 대체)
+        GenerateBoxesToPlace();
     }
 
-    //새로운 박스를 소환
-    private void SpawnNextBox()
+    // --- 요구사항 1: 각 층에 0~3개의 랜덤 초기 박스 생성 ---
+    private void SpawnInitialRandomBoxes(GridManager targetGrid)
     {
-        currentBox = Instantiate(boxPrefab, boxSpawnPoint.position, Quaternion.identity);
-        Box boxScript = currentBox.GetComponent<Box>();
-        
-        if (boxScript != null)
+        int randomBoxCount = Random.Range(0, 3); // 0,1,2 중 랜덤
+
+        for (int i = 0; i < randomBoxCount; i++)
         {
-        
-            boxScript.InitRandomBox(); 
-            currentBoxSize = boxScript.size;
-            targetShelfID = boxScript.targetShelfID;
+            // BoxManager에게 박스 생성을 요청합니다. (index 0을 주어 중심점에 겹치게 생성)
+            GameObject initBox = boxManager.GenerateBox(0); 
+            Box boxScript = initBox.GetComponent<Box>();
+
+            // 해당 층의 랜덤한 그리드 좌표에 배치할 수 있는지 찔러봅니다.
+            int randX = Random.Range(0, targetGrid.gridWidth);
+            int randZ = Random.Range(0, targetGrid.gridDepth);
+
+            Vector3 finalPosition;
+            bool isSuccess = targetGrid.TryPlaceBox(randX, randZ, boxScript.size, out finalPosition);
+
+            if (isSuccess)
+            {
+                // 공간이 비어있다면 해당 좌표로 순간이동 시키고 추적 리스트에 넣습니다.
+                initBox.transform.position = finalPosition;
+                allSpawnedBoxes.Add(initBox); 
+            }
+            else
+            {
+                // 공간이 겹친다면 이 초기 상자는 쿨하게 파괴합니다.
+                Destroy(initBox);
+            }
+        }
+    }
+
+    // --- 요구사항 2: 에이전트가 배치할 8개의 박스 한 번에 생성 ---
+    private void GenerateBoxesToPlace()
+    {
+        for (int i = 0; i < totalBoxesToPlace; i++)
+        {
+            // BoxManager의 GenerateBox(index)를 호출하면 알아서 소용돌이 형태로 배치되어 나옵니다.
+            GameObject newBox = boxManager.GenerateBox(i + 1);
+            Box boxScript = newBox.GetComponent<Box>();
+            
+            boxesToPlace.Add(boxScript); // 대기열에 추가
+            allSpawnedBoxes.Add(newBox); // 청소 리스트에 추가
         }
     }
 
@@ -76,62 +121,76 @@ public class WarehouseAgent : Agent
                 sensor.AddObservation(data);
             }
         }
-        //현재 배치해야 할 박스의 크기 정보 x, y, z
-        sensor.AddObservation(currentBoxSize); 
-
-        //박스가 가야 할 목표 shelfID 0 or 1
-        sensor.AddObservation(targetShelfID);
+        // 2. 현재 차례의 박스 정보 전달
+        if (currentBoxIndex < boxesToPlace.Count)
+        {
+            Box currentBoxScript = boxesToPlace[currentBoxIndex];
+            sensor.AddObservation(currentBoxScript.size);         // 크기 정보 (x, y, z)
+            sensor.AddObservation(currentBoxScript.targetShelfID); // 가야 할 선반 ID (무거우면 0, 가벼우면 1)
+        }
+        else
+        {
+            // 박스를 모두 배치해서 더 이상 볼 게 없더라도 배열 크기를 맞추기 위해 더미 값을 넣습니다.
+            sensor.AddObservation(Vector3.zero);
+            sensor.AddObservation(0);
+        }
     }
 
     //행동 결정했을 때 <- 파이썬이랑 어떤식으로 주고받을지 정하고 수정해야됨요!!!!!!!!!!!
+    // --- 파이썬에서 행동(Action) 명령을 받았을 때 ---
     public override void OnActionReceived(ActionBuffers actions)
     {
-        //여기는 상황에 맞게 수정해야해
-        //파이썬에서 내리는 명령 수신 ContinuousActions에서 선반의 x와 y비율을 줌
+        // 8개를 다 배치했다면 더 이상 행동하지 않음
+        if (currentBoxIndex >= boxesToPlace.Count) return;
+
+        // 대기열에서 이번 턴에 배치할 상자(현재 인덱스)의 정보를 가져옵니다.
+        Box currentBoxScript = boxesToPlace[currentBoxIndex];
+        Vector3 currentBoxSize = currentBoxScript.size;
+        int targetShelfID = currentBoxScript.targetShelfID;
+
+        // 파이썬의 Action 데이터 파싱
         float actionX = actions.ContinuousActions[0];
         float actionZ = actions.ContinuousActions[1];
-        //DiscreteActions에서 1층 또는 2층을 줌
-        int floorAction = actions.DiscreteActions[0];
+        int floorAction = actions.DiscreteActions[0]; // 0이면 1층, 1이면 2층
 
-        // targetShelfID는 0 또는 1. floorAction도 0 또는 1. 현재 잘못된 shelf에 배치할 확률은 0임.
+        // 목표 선반(0 또는 1)과 행동 층수(0 또는 1)를 조합해 최종 목표 GridManager(0~3)를 찾습니다.
         int finalGridIndex = (targetShelfID * 2) + floorAction; 
         GridManager targetGrid = allFloors[finalGridIndex];
 
-        //좌표 계산
+        // 파이썬에서 온 -1.0 ~ 1.0 값을 유니티 그리드 인덱스 좌표로 변환
         int gridX = Mathf.FloorToInt((actionX + 1f) / 2f * targetGrid.gridWidth);
         int gridZ = Mathf.FloorToInt((actionZ + 1f) / 2f * targetGrid.gridDepth);
 
+        // 그리드 밖으로 튀어나가지 않게 안전장치
         gridX = Mathf.Clamp(gridX, 0, targetGrid.gridWidth - 1);
         gridZ = Mathf.Clamp(gridZ, 0, targetGrid.gridDepth - 1);
 
-        // 
+        // 유니티 상에서 해당 좌표에 상자를 넣을 수 있는지 검증
         Vector3 finalPosition;
         bool isSuccess = targetGrid.TryPlaceBox(gridX, gridZ, currentBoxSize, out finalPosition);
 
         if (isSuccess)
         {
-            // --- 성공 시 ---
-            currentBox.transform.position = finalPosition; // 순간이동
-            currentBox = null;// 에이전트 손에서 놓음
+            // [성공]
+            // 상자를 선반 위로 순간이동시킵니다.
+            currentBoxScript.transform.position = finalPosition; 
             
             placedBoxCount++;
-            AddReward(1.0f); // 1개 배치 성공 보상
+            currentBoxIndex++; // 다음 박스로 차례(인덱스)를 넘깁니다. (SpawnNextBox의 역할을 이 한 줄이 대신함!)
+            AddReward(1.0f);   // 배치 성공 보상
 
-            if (placedBoxCount >= 8)
+            // 8개를 전부 성공적으로 배치했다면 에피소드 클리어
+            if (placedBoxCount >= totalBoxesToPlace)
             {
-                AddReward(5.0f); // 8개 모두 성공 시 추가 보상 (에피소드 하나 클리어)
-                EndEpisode(); // 에피소드 종료
-            }
-            else
-            {
-                SpawnNextBox(); // 다음 박스 생성
+                AddReward(5.0f); 
+                EndEpisode(); 
             }
         }
         else
         {
-            // --- 실패 시 ---
-            SetReward(-1.0f); // 박스 놓을 수 없는 위치에 박스 놓을 때 페널티
-            EndEpisode(); // 즉시 에피소드 종료 및 리셋
+            // [실패] 겹치거나 튀어나가는 자리에 두려고 한 경우
+            SetReward(-1.0f); // 페널티 부여
+            EndEpisode();     // 즉시 에피소드 강제 종료 (리셋됨)
         }
     }
 }
