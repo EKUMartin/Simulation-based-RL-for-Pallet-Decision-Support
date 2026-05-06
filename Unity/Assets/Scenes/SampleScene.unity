@@ -457,7 +457,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0fb949a1ba96cc46aad8ebc414b344e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoxManager
-  boxPrefab: {fileID: 197587367579228076, guid: c3dee62c8781f9c4aaa6bedbbab55580, type: 3}
+  boxPrefab: {fileID: 379528076207389831, guid: 5cffff6ab6e62324eba27500def5c655, type: 3}
 --- !u!4 &304742300
 Transform:
   m_ObjectHideFlags: 0
@@ -3317,7 +3317,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1329013178}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 296016d31b2121a4191dd1c688b09aa5, type: 3}
+  m_Script: {fileID: 11500000, guid: 2976c91e563fd1e4596b33d80bd52eae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WarehouseAgent
   agentParameters:
@@ -3330,8 +3330,6 @@ MonoBehaviour:
   shelf1_Floor2: {fileID: 1604564889}
   boxManager: {fileID: 304742299}
   totalBoxesToPlace: 8
-  currentBoxSize: {x: 0, y: 0, z: 0}
-  targetShelfID: 0
 --- !u!114 &1329013180
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3360,11 +3358,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 1
+    VectorObservationSize: 6692
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2
-      BranchSizes: 02000000
+      BranchSizes: 0200000002000000
     VectorActionSize: 
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
@@ -3378,6 +3376,22 @@ MonoBehaviour:
   m_UseChildActuators: 1
   m_DeterministicInference: 0
   m_ObservableAttributeHandling: 0
+--- !u!114 &1329013182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1329013178}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b6042bc9a5d4aa58d931eae49442e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Agent
+  agentParameters:
+    maxStep: 0
+  hasUpgradedFromAgentParameters: 1
+  MaxStep: 0
 --- !u!1 &1402846348
 GameObject:
   m_ObjectHideFlags: 0
@@ -4941,6 +4955,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 802ef1d2e4c665643a25d947924c3584, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1329013180}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 802ef1d2e4c665643a25d947924c3584, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1329013182}
   m_SourcePrefab: {fileID: 100100000, guid: 802ef1d2e4c665643a25d947924c3584, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

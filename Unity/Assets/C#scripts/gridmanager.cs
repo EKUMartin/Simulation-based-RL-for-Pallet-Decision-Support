@@ -114,19 +114,19 @@ public class GridManager : MonoBehaviour
         return true; //배치 성공
     }
 
-    //에이전트가 Observation 수집할 때 호출할 함수: 2차원 grid를 1차원 배열로 변환
+
+    // 에이전트가 Observation 수집할 때 호출할 함수: 2차원 grid를 1차원 배열로 변환
     public float[] GetGridData()
     {
-        //그리드의 전체 칸 수만큼 빈 1차원 배열을 만듬
         float[] gridtoarray = new float[gridWidth * gridDepth];
         int index = 0;
 
-        //2차원 배열을 순회하면서 1차원 배열에 1을 채움
-        for (int x = 0; x < gridWidth; x++)
+        // 🌟 수정된 부분: 파이썬의 행렬 구조에 맞추기 위해 z(세로/행)부터 순회합니다.
+        for (int z = 0; z < gridDepth; z++)
         {
-            for (int z = 0; z < gridDepth; z++)
+            for (int x = 0; x < gridWidth; x++)
             {
-                gridtoarray[index] = gridMap[x, z]; //0.0: 빈 공간 또는 1.0: 박스 있음
+                gridtoarray[index] = gridMap[x, z]; 
                 index++;
             }
         }

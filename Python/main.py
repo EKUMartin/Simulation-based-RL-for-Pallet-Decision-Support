@@ -92,9 +92,9 @@ def train():
                         n_flat_fm = np.array(feasibility_map).flatten()
                         norm_n_box_w = next_box[0] / shelf_width
                         norm_n_box_h = next_box[1] / shelf_length
-                        # norm_n_box_weight = next_box[2] / 10.0
-                        # norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h, norm_n_box_weight])
-                        norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h])
+                        norm_n_box_weight = next_box[2] / 10.0
+                        norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h, norm_n_box_weight])
+                        #norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h])
                         n_rem_stats = env.get_remaining_stats()
                         
                         n_combined_box_data = np.concatenate((norm_n_box_info, n_rem_stats))

@@ -101,7 +101,7 @@ public class RandomBox_generator : MonoBehaviour
         boxScript.weight = weight;
         // 1층/2층 구분용 타겟 선반 ID 지정 로직 
         // 예: 무게가 5.0kg 이상이면 1층(ID:0), 가벼우면 2층(ID:1)
-        boxScript.targetShelfID = (weight >= 5.0f) ? 0 : 1; 
+        boxScript.targetShelfID = Random.Range(0, 2);
 
         // 생성된 박스 오브젝트를 WarehouseAgent로 반환
         return box;
