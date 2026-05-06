@@ -175,7 +175,7 @@ public class WarehouseAgent : Agent
         else
         {
             // 실패하더라도 에피소드를 끝내지 않고 다음 박스로 스킵!
-            SetReward(-0.1f); 
+            //SetReward(-0.1f); 
             Destroy(currentBoxScript.gameObject); 
             currentBoxIndex++; 
         }
@@ -183,7 +183,7 @@ public class WarehouseAgent : Agent
         // 8개 모두 소진 시 무한 리필
         if (currentBoxIndex >= boxesToPlace.Count)
         {
-            AddReward(1.0f); 
+            //AddReward(1.0f); 
             boxesToPlace.Clear();
             GenerateBoxesToPlace();
             currentBoxIndex = 0;
