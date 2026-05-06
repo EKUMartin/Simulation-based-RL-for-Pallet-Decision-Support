@@ -55,12 +55,12 @@ public class RandomBox_generator : MonoBehaviour
         if (boxPrefab == null) return null;
 
         //랜덤 규격 결정 (0.2 ~ 1.0)
-        float w = Random.Range(0.2f, 1.0f);
-        float h = Random.Range(0.2f, 1.0f);
-        float d = Random.Range(0.2f, 1.0f);
+        float w = Random.Range(0.2f, 0.8f);
+        float h = Random.Range(0.2f, 0.8f);
+        float d = Random.Range(0.2f, 0.8f);
 
         //부피에 비례하는 무게 계산 (밀도 상수 10f)
-        float weight = (w * h * d) * 10f;
+        float weight = (w * h * d) * 30f;
 
         //프리팹 인스턴스 생성
         GameObject box = Instantiate(boxPrefab);

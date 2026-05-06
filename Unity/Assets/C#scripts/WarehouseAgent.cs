@@ -60,7 +60,7 @@ public class WarehouseAgent : Agent
     private void SpawnInitialRandomBoxes(GridManager targetGrid)
     {
         // 0, 1, 2, 3개 중 하나를 랜덤으로 뽑습니다.
-        int randomBoxCount = Random.Range(0, 4); 
+        int randomBoxCount = Random.Range(0, 3); 
 
         for (int i = 0; i < randomBoxCount; i++)
         {
