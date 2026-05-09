@@ -18,7 +18,7 @@ class ActorCritic(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, padding=1), 
             nn.ReLU()
         )
-        self.box_info_dim = 9
+        self.box_info_dim = 8
 
         self.actor_head = nn.Sequential(
             nn.Conv2d(64 + self.box_info_dim, 32, kernel_size=1),
@@ -53,7 +53,7 @@ class ActorCritic(nn.Module):
         spatial_features = self.feature_extractor(grid_data) # (Batch, 64, H, W)
 
         # (Batch, 3) -> (Batch, 3, H, W)
-        box_info_spatial = box_info.view(-1, 9, 1, 1).expand(-1, 9, self.h, self.w)
+        box_info_spatial = box_info.view(-1, 8, 1, 1).expand(-1, 8, self.h, self.w)
         
 
         actor_input = torch.cat((spatial_features, box_info_spatial), dim=1)

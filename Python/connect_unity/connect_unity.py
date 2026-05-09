@@ -11,9 +11,7 @@ class connect_unity:
     
     last_weight = 0.0
     current_weight = 0.0
-    
-    # 🌟 [핵심] 매니저가 결정한 층수(0 또는 1)를 기억해둘 클래스 변수
-    current_floor_offset = 0 
+    last_valid_state = None 
 
     @classmethod
     def reset(cls):
@@ -25,66 +23,40 @@ class connect_unity:
         else:
             cls.env.reset()
             cls.last_weight = 0.0
+            cls.last_valid_state = None
 
     @classmethod
     def get_observation(cls):
-        """유니티에서 데이터를 가져와서 현재 배치할 층의 지도로 복원"""
+        """유니티가 보낸 1개 층의 최적화된 데이터를 지도로 복원"""
         decision_steps, terminal_steps = cls.env.get_steps(cls.behavior_name)
 
         if len(terminal_steps) > 0:
-            return [cls.shelf_w, cls.shelf_h], np.zeros((cls.shelf_h, cls.shelf_w)).tolist(), []
+            fallback_state = cls.last_valid_state if cls.last_valid_state is not None else np.zeros((cls.shelf_h, cls.shelf_w)).tolist()
+            return [cls.shelf_w, cls.shelf_h], fallback_state, []
 
         if len(decision_steps) == 0:
             cls.env.step()
             decision_steps, terminal_steps = cls.env.get_steps(cls.behavior_name)
             if len(terminal_steps) > 0 or len(decision_steps) == 0:
-                return [cls.shelf_w, cls.shelf_h], np.zeros((cls.shelf_h, cls.shelf_w)).tolist(), []
+                fallback_state = cls.last_valid_state if cls.last_valid_state is not None else np.zeros((cls.shelf_h, cls.shelf_w)).tolist()
+                return [cls.shelf_w, cls.shelf_h], fallback_state, []
 
         obs = decision_steps.obs[0][0]
 
+        # 데이터 끝에서 박스 규격 추출
         box_x = obs[-4] 
         box_y = obs[-3]
         box_z = obs[-2]
-        target_shelf_id = int(obs[-1])
+        # target_shelf_id = obs[-1] (유니티에서 전체 층을 탐색하므로 이제 파이썬에선 쓰지 않지만 통신 규격을 위해 수신은 합니다)
         
         grid_area = cls.shelf_w * cls.shelf_h
         box_weight = float(box_x * box_y * box_z * 10.0)
         cls.current_weight = box_weight
 
-        # 🌟 타겟 선반(0 또는 1)의 1층과 2층 도면 데이터를 각각 추출
-        floor1_start = (target_shelf_id * 2) * grid_area
-        floor2_start = (target_shelf_id * 2 + 1) * grid_area
-        
-        floor1_grid = obs[floor1_start : floor1_start + grid_area]
-        floor2_grid = obs[floor2_start : floor2_start + grid_area]
-
-        # 1층과 2층의 사용률 계산
-        floor1_usage = sum(floor1_grid) / grid_area
-        floor2_usage = sum(floor2_grid) / grid_area
-
-        # 🎯 스마트 라우팅 알고리즘 (평균 무게 2.5kg 기준)
-        floor_offset = 0 # 기본값 1층(0)
-
-        if box_weight >= 2.5: # 무거운 상자
-            if floor1_usage < 0.8:  
-                floor_offset = 0
-            else:                   
-                floor_offset = 1
-        else:                 # 가벼운 상자
-            if floor2_usage < 0.8:  
-                floor_offset = 1
-            else:                   
-                floor_offset = 0
-
-        # 🌟 결정된 층수를 나중에 쓰기 위해 클래스 변수에 저장
-        cls.current_floor_offset = floor_offset
-
-        # 선택된 층의 도면만 잘라서 RL 에이전트(테트리스 장인)에게 전달
-        final_grid_index = (target_shelf_id * 2) + floor_offset
-        start_idx = final_grid_index * grid_area
-        grid_flat = obs[start_idx : start_idx + grid_area]
-
+        # 🌟 유니티가 딱 1개 층만 보냈으므로, 처음부터 grid_area까지만 자르면 됩니다.
+        grid_flat = obs[:grid_area] 
         current_state = np.reshape(grid_flat, (cls.shelf_h, cls.shelf_w)).tolist()
+        cls.last_valid_state = current_state
 
         box_w_cells = max(1, int(round(box_x / 0.1)))
         box_l_cells = max(1, int(round(box_z / 0.1)))
@@ -95,20 +67,23 @@ class connect_unity:
 
     @classmethod
     def execute_step(cls, action_history):
+        """정수형 좌표를 유니티로 다이렉트 전송"""
         if not action_history:
             cls.env.step()
             return
 
         for action in action_history:
-            # 파이썬 RL이 내놓은 3가지 행동(좌표, 회전)
             x, y, rotation = action
-            actionX = ((x + 0.5) / cls.shelf_w) * 2.0 - 1.0
-            actionZ = ((y + 0.5) / cls.shelf_h) * 2.0 - 1.0
+            
+            # 연속형 데이터 사용 안 함
+            continuous_actions = np.empty((1, 0), dtype=np.float32)
+            
+            # 🌟 [X좌표, Z좌표, 회전여부] 딱 3개의 이산형(정수) 데이터만 포장
+            discrete_actions = np.array([[x, y, 1 if rotation else 0]], dtype=np.int32)
 
             action_tuple = ActionTuple(
-                continuous=np.array([[actionX, actionZ]], dtype=np.float32),
-                # 🌟 [핵심] 회전 정보와 함께 매니저가 고른 층수(current_floor_offset)를 전송!
-                discrete=np.array([[1 if rotation else 0, cls.current_floor_offset]], dtype=np.int32)
+                continuous=continuous_actions,
+                discrete=discrete_actions
             )
         
             cls.env.set_actions(cls.behavior_name, action_tuple)
