@@ -80,7 +80,24 @@ public class WarehouseAgent : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        if (currentBoxIndex >= boxesToPlace.Count) return;
+        //데이터 없을때
+        if (currentBoxIndex >= boxesToPlace.Count)
+        {
+            // 1. 그리드 크기(1672개)만큼 0 배열 전송
+            if (allShelves.Count > 0 && allShelves[0] != null)
+            {
+                int totalCells = allShelves[0].gridWidth * allShelves[0].gridDepth;
+                sensor.AddObservation(new float[totalCells]); 
+            }
+            else
+            {
+                sensor.AddObservation(new float[1672]);
+            }
+
+        // 2. 상자 크기(3개)만큼 0 전송 (Vector3.zero)
+            sensor.AddObservation(Vector3.zero);
+            return;
+        }
 
     //미리 정해진 층의 인덱스를 사용
         selectedShelfIndex = boxesToPlace[currentBoxIndex].targetShelfID;

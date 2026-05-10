@@ -44,9 +44,9 @@ class connect_unity:
         obs = decision_steps.obs[0][0]
 
         # 데이터 끝에서 박스 규격 추출
-        box_x = obs[-4] 
-        box_y = obs[-3]
-        box_z = obs[-2]
+        box_x = obs[-3] 
+        box_y = obs[-2]
+        box_z = obs[-1]
         
         grid_area = cls.shelf_w * cls.shelf_h
         box_weight = float(box_x * box_y * box_z * 10.0)
