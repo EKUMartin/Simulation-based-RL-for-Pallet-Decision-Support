@@ -15,7 +15,7 @@ public class WarehouseAgent : Agent
     private List<GameObject> allSpawnedBoxes = new List<GameObject>();
     private List<Box> boxesToPlace = new List<Box>();
     private int currentBoxIndex = 0;
-    private int selectedShelfIndex = 0; // 이번 턴에 파이썬에게 보여준 선반 번호
+    private int selectedShelfIndex = 0; //이번 턴에 파이썬에게 보여준 선반 번호
 
     public override void OnEpisodeBegin()
     {
@@ -36,31 +36,43 @@ public class WarehouseAgent : Agent
     {
         List<Box> tempBoxes = new List<Box>();
 
-        for (int i = 0; i < 8; i++)
+        //생성 박스 개수 랜덤이요~
+        int targetBoxCount = Random.Range(1, 9);
+
+        for (int i = 0; i < targetBoxCount; i++)
         {
-            GameObject newBoxObj = boxManager.GenerateBox(i);
-            Box boxScript = newBoxObj.GetComponent<Box>();
+            //박스 대형(>0.15) or 소형(<=0.15) 50% 확률로 결정 -> 이거에 따라서 나중에 박스 y값 정하는거임요
+            bool isLargeBox = Random.value > 0.5f;
 
-            float volume = boxScript.size.x * boxScript.size.y * boxScript.size.z;
+            //선반 그룹 선택
+            //대형이면 0 또는 1번 선반(1층), 소형이면 2 또는 3번 선반(2층)
+            int targetShelfID = isLargeBox ? Random.Range(0, 2) : Random.Range(2, 4);
+            GridManager targetShelf = allShelves[targetShelfID];
 
-        // 기준값 0.15f
-            if (volume > 0.15f) 
+            //대형/소형 조건과 y<=1m 조건 만족하도록 y 크기 역산 
+            if (targetShelf.TryGetAndReserveFittingBoxSize(out Vector3 fittingSize, isLargeBox))
             {
-            // 무겁고 큰 박스 -> 1층부 (Element 0 또는 1번 선반)
-            // 선반1의 1층과 선반2의 1층 중 랜덤으로 골고루 들어감
-                boxScript.targetShelfID = Random.Range(0, 2); 
-            } 
-            else 
-            {
-            // 가볍고 작은 박스 -> 2층부 (Element 2 또는 3번 선반)
-            // 선반1의 2층과 선반2의 2층 중 랜덤으로 골고루 들어감
-                boxScript.targetShelfID = Random.Range(2, 4); 
+                //크기 찾고 박스 생성
+                GameObject newBoxObj = boxManager.GenerateBox(i, fittingSize, targetShelfID);
+                //Box boxScript = newBoxObj.GetComponent<Box>();
+                tempBoxes.Add(newBoxObj.GetComponent<Box>());
+                //tempBoxes.Add(boxScript);
+                allSpawnedBoxes.Add(newBoxObj);
             }
-
-            tempBoxes.Add(boxScript);
-            allSpawnedBoxes.Add(newBoxObj);
         }
-    
+
+        //박스 생성할 때 채운 데이터 (2.0) 지우기
+        foreach (var shelf in allShelves)
+        {
+            shelf.ClearTemporaryReservations();
+        }
+
+        if (tempBoxes.Count == 0)
+        {
+            EndEpisode();
+            return;
+        }
+
     // 정렬 유지 (큰 상자부터 처리하도록)
         tempBoxes.Sort((a, b) => (b.size.x * b.size.z).CompareTo(a.size.x * a.size.z));
         boxesToPlace.AddRange(tempBoxes);
@@ -70,12 +82,13 @@ public class WarehouseAgent : Agent
     {
         if (currentBoxIndex >= boxesToPlace.Count) return;
 
-    // 가장 비어있는 층이 아니라, 상자에 미리 정해진 층의 인덱스를 사용
+    //미리 정해진 층의 인덱스를 사용
         selectedShelfIndex = boxesToPlace[currentBoxIndex].targetShelfID;
 
     // 파이썬에게는 해당 층의 지도 데이터만 전송
-        float[] gridData = allShelves[selectedShelfIndex].GetGridData();
-        foreach (float data in gridData) sensor.AddObservation(data);
+        sensor.AddObservation(allShelves[selectedShelfIndex].GetGridData());
+        //float[] gridData = allShelves[selectedShelfIndex].GetGridData();
+        //foreach (float data in gridData) sensor.AddObservation(data);
 
         sensor.AddObservation(boxesToPlace[currentBoxIndex].size);
 

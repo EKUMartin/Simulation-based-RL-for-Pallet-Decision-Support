@@ -51,19 +51,17 @@ public class RandomBox_generator : MonoBehaviour
     */
 
     // 🌟 타겟 선반(targetShelf)을 매개변수로 받을 수 있도록 수정
-    public GameObject GenerateBox(int index, GridManager targetShelf = null) 
+    public GameObject GenerateBox(int index, Vector3 predefinedSize, int targetShelfID) 
     {
         if (boxPrefab == null) return null;
 
-        float w, h, d;
-
+        /*
         // 🌟 타겟 선반이 전달되었다면, 남은 빈 공간에 딱 맞는 크기 역산
         if (targetShelf != null)
         {
-            Vector3 fittingSize = targetShelf.GetFittingBoxSize();
-            w = fittingSize.x;
-            h = fittingSize.y;
-            d = fittingSize.z;
+            float w = predefinedSize.x;
+            float h = predefinedSize.y;
+            float d = predefinedSize.z;
         }
         else
         {
@@ -72,9 +70,10 @@ public class RandomBox_generator : MonoBehaviour
             h = Random.Range(0.2f, 0.8f);
             d = Random.Range(0.2f, 0.8f);
         }
+        */
 
         // 부피에 비례하는 무게 계산 (밀도 상수 30f)
-        float weight = (w * h * d) * 30f;
+        //float weight = (w * h * d) * 30f;
 
         GameObject box = Instantiate(boxPrefab);
 
@@ -86,20 +85,32 @@ public class RandomBox_generator : MonoBehaviour
         float currentZ = -16f + (Mathf.Sin(angle) * radius);
 
         box.transform.position = new Vector3(currentX, 1.5f, currentZ);
-        box.transform.localScale = new Vector3(w, h, d);
-        
+        box.transform.localScale = predefinedSize;
+        //box.transform.localScale = new Vector3(w, h, d);
+        /*
         Box boxScript = box.GetComponent<Box>();
         if (boxScript == null) 
         {
             boxScript = box.AddComponent<Box>();
         }
-      
-    boxScript.size = new Vector3(w, h, d);
-    boxScript.weight = weight;
+        */
 
-// 우선 0번으로 초기화 (Agent에서 부피에 따라 1번 그룹 혹은 2번 그룹으로 보낼 예정)
-    boxScript.targetShelfID = Random.Range(0, 4); 
+        Box boxScript = box.GetComponent<Box>();
+        if (boxScript == null) 
+        {
+            boxScript = box.AddComponent<Box>();
+        }
 
-    return box;
+        boxScript.size = predefinedSize;
+        //boxScript.size = new Vector3(w, h, d);
+        boxScript.weight = (predefinedSize.x * predefinedSize.y * predefinedSize.z) * 30f;
+        //boxScript.weight = weight;
+
+        boxScript.targetShelfID = targetShelfID;
+
+        // 우선 0번으로 초기화 (Agent에서 부피에 따라 1번 그룹 혹은 2번 그룹으로 보낼 예정)
+        //boxScript.targetShelfID = Random.Range(0, 4); 
+
+        return box;
     }
 }

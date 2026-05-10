@@ -9,7 +9,7 @@ public class GridManager : MonoBehaviour
     [HideInInspector] public int gridWidth;
     [HideInInspector] public int gridDepth;
     
-    //파이썬으로 넘길 배열 (0.0: 박스없, 1.0: 박스있)
+    //파이썬으로 넘길 배열 (0.0: 박스없, 1.0: 박스있, 2.0: 박스 생성할 때 grid 탐색하며 사용)
     public float[,] gridMap; 
 
     private BoxCollider shelfCollider;
@@ -35,7 +35,7 @@ public class GridManager : MonoBehaviour
         ScanInitialBoxes(); 
     }
 
-    //배열을 0으로 초기화
+    //배열 0으로 초기화
     public void ResetGrid()
     {
         for (int x = 0; x < gridWidth; x++)
@@ -54,14 +54,14 @@ public class GridManager : MonoBehaviour
         {
             for (int z = 0; z < gridDepth; z++)
             {
-                // 각 칸의 중앙 X, Z 좌표
+                //각 칸의 중앙 X, Z 좌표
                 float posX = minBounds.x + (x * cellSize) + (cellSize / 2f);
                 float posZ = minBounds.z + (z * cellSize) + (cellSize / 2f);
                 
-                // 선반 위쪽(높이 y + 1m)에서 아래로 레이저를 쏴서 검사
+                //선반 위쪽(y + 1m)에서 아래로 레이저를 쏴서 검사
                 Vector3 rayStart = new Vector3(posX, shelfCollider.bounds.max.y + 1f, posZ);
 
-                // 아래 방향(Vector3.down)으로 레이저를 쏴서 box에 닿는지 확인
+                //아래 방향(Vector3.down)으로 레이저를 쏴서 box에 닿는지 확인
                 if (Physics.Raycast(rayStart, Vector3.down, 1.1f, boxLayer)) //1.1f는 층 사이 간격
                 {
                     gridMap[x, z] = 1.0f; // 닿았으면 해당 칸은 채워진 것으로 인식
@@ -75,7 +75,7 @@ public class GridManager : MonoBehaviour
     {
         placePosition = Vector3.zero;
 
-        //박스의 실제 크기를 셀 개수로 변환 (예: 0.3m/0.1m = 3칸)
+        //박스의 실제 크기를 셀 개수로 변환
         int boxCellsX = Mathf.RoundToInt(boxSize.x / cellSize);
         int boxCellsZ = Mathf.RoundToInt(boxSize.z / cellSize);
 
@@ -85,7 +85,7 @@ public class GridManager : MonoBehaviour
             return false; //배치 불가 (범위 초과)
         }
 
-        // 다른 박스와 겹치는지(1.0f) 검사
+        //다른 박스와 겹치는지(1.0) 검사
         for (int x = startX; x < startX + boxCellsX; x++)
         {
             for (int z = startZ; z < startZ + boxCellsZ; z++)
@@ -94,7 +94,7 @@ public class GridManager : MonoBehaviour
             }
         }
 
-        //검사를 통과했다면 해당 공간을 채움(1.0f)
+        //검사를 통과했다면 해당 공간을 채움(1.0)
         for (int x = startX; x < startX + boxCellsX; x++)
         {
             for (int z = startZ; z < startZ + boxCellsZ; z++)
@@ -114,25 +114,141 @@ public class GridManager : MonoBehaviour
         return true; //배치 성공
     }
 
+    public bool TryGetAndReserveFittingBoxSize(out Vector3 boxSize, bool isLargeBox)
+    {
+        boxSize = Vector3.zero;
+        int bestX = -1, bestZ = -1, bestW = 0, bestD = 0;
+        int maxArea = 0;
 
-    // 에이전트가 Observation 수집할 때 호출할 함수: 2차원 grid를 1차원 배열로 변환
+        //그리드 탐색하고 가장 큰 빈 직사각형 찾기
+        for (int startX = 0; startX < gridWidth; startX++)
+        {
+            for (int startZ = 0; startZ < gridDepth; startZ++)
+            {
+                if (gridMap[startX, startZ] != 0.0f) continue;
+                int currentMaxW = 0;
+                while (startX + currentMaxW < gridWidth && gridMap[startX + currentMaxW, startZ] == 0.0f)
+                {
+                    currentMaxW++;
+                    if (currentMaxW >= 8) break;
+                }
+                for (int w = 1; w <= currentMaxW; w++)
+                {
+                    int currentMaxD = 0;
+                    bool canExpand = true;
+                    while (startZ + currentMaxD < gridDepth && canExpand)
+                    {
+                        for (int x = startX; x < startX + w; x++)
+                        {
+                            if (gridMap[x, startZ + currentMaxD] != 0.0f) { canExpand = false; break; }
+                        }
+                        if (canExpand) { currentMaxD++; if (currentMaxD >= 8) break; }
+                    }
+                    int area = w * currentMaxD;
+                    if (area > maxArea && w >= 2 && currentMaxD >= 2)
+                    {
+                        maxArea = area; bestX = startX; bestZ = startZ; bestW = w; bestD = currentMaxD;
+                    }
+                }
+            }
+        }
+
+        if (maxArea == 0) return false;
+
+        //부피 조건(0.15 기준)과 y값 1m 이하 조건을 동시에 만족하는 x,z,y 찾기 : 층 결정 -> 층에 따른 부피 조건에 맞춰서 y값 정함요
+        int finalW = 0, finalD = 0;
+        float finalH = 0f;
+        bool foundValidSize = false;
+
+        for (int retry = 0; retry < 20; retry++)
+        {
+            finalW = Random.Range(2, bestW + 1);
+            finalD = Random.Range(2, bestD + 1);
+            float baseArea = (finalW * cellSize) * (finalD * cellSize); //바닥 면적
+
+            if (isLargeBox) 
+            {
+                //대형 박스 부피 > 0.15
+                float minRequiredHeight = 0.15f / baseArea; 
+                
+                //0.1 단위로 올림 ex) 0.23 -> 0.3
+                int minHSteps = Mathf.CeilToInt(Mathf.Max(0.2f, minRequiredHeight) * 10f); 
+                int maxHSteps = 10; // 1.0m = 10칸
+
+                if (minHSteps <= maxHSteps) 
+                {   finalH = Random.Range(minHSteps, maxHSteps + 1) * 0.1f;
+                    foundValidSize = true; break;
+                }
+            }
+            else 
+            {
+                //소형 박스 부피 <= 0.15
+                float maxAllowedHeight = 0.149f / baseArea;
+                
+                int minHSteps = 2;
+                //0.1 단위로 내림
+                int maxHSteps = Mathf.FloorToInt(Mathf.Min(1.0f, maxAllowedHeight) * 10f); 
+
+                if (minHSteps <= maxHSteps) 
+                {
+                    finalH = Random.Range(minHSteps, maxHSteps + 1) * 0.1f;
+                    foundValidSize = true; break;
+                }
+            }
+        }
+
+        // 안전장치 있으면 좋대요: 20번 돌려도 못 찾으면 강제로 최대 면적 사용 후 높이 보정
+        if (!foundValidSize)
+        {
+            finalW = bestW; finalD = bestD;
+            float baseArea = (finalW * cellSize) * (finalD * cellSize);
+            if (isLargeBox) 
+            {
+                float h = Mathf.Clamp(0.151f / baseArea, 0.2f, 1.0f);
+                finalH = Mathf.Ceil(h * 10f) / 10f; // 0.1 단위 강제 올림
+            }
+            else 
+            {
+                float h = Mathf.Clamp(0.149f / baseArea, 0.2f, 1.0f);
+                finalH = Mathf.Floor(h * 10f) / 10f;
+            }
+            finalH = Mathf.Clamp(finalH, 0.2f, 1.0f); // 최종적으로 0.2 ~ 1.0 사이 보장
+        }
+
+        int offsetX = Random.Range(0, bestW - finalW + 1);
+        int offsetZ = Random.Range(0, bestD - finalD + 1);
+        int finalX = bestX + offsetX;
+        int finalZ = bestZ + offsetZ;
+
+        for (int x = finalX; x < finalX + finalW; x++)
+        {
+            for (int z = finalZ; z < finalZ + finalD; z++) gridMap[x, z] = 2.0f; //잠시 탐색 위해
+        }
+
+        boxSize = new Vector3(finalW * cellSize, finalH, finalD * cellSize);
+        return true;
+    }
+
+    public void ClearTemporaryReservations()
+    {
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int z = 0; z < gridDepth; z++)
+                if (gridMap[x, z] == 2.0f) gridMap[x, z] = 0.0f;
+        }
+    }
+
     public float[] GetGridData()
     {
         float[] gridtoarray = new float[gridWidth * gridDepth];
         int index = 0;
-
-        // 🌟 수정된 부분: 파이썬의 행렬 구조에 맞추기 위해 z(세로/행)부터 순회합니다.
         for (int z = 0; z < gridDepth; z++)
-        {
             for (int x = 0; x < gridWidth; x++)
-            {
-                gridtoarray[index] = gridMap[x, z]; 
-                index++;
-            }
-        }
-
+                gridtoarray[index++] = gridMap[x, z];
         return gridtoarray;
     }
+
+
     // 🌟 [추가된 함수] 현재 선반의 빈 공간을 분석하여 딱 들어맞는 상자 크기 반환
     public Vector3 GetFittingBoxSize()
     {
