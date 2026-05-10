@@ -133,5 +133,71 @@ public class GridManager : MonoBehaviour
 
         return gridtoarray;
     }
+    // 🌟 [추가된 함수] 현재 선반의 빈 공간을 분석하여 딱 들어맞는 상자 크기 반환
+    public Vector3 GetFittingBoxSize()
+    {
+        System.Collections.Generic.List<Vector2Int> emptyCells = new System.Collections.Generic.List<Vector2Int>();
+        
+        // 1. 현재 0.0f(빈 공간)인 모든 셀 좌표 수집
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int z = 0; z < gridDepth; z++)
+            {
+                if (gridMap[x, z] == 0.0f)
+                {
+                    emptyCells.Add(new Vector2Int(x, z));
+                }
+            }
+        }
+
+        // 예외: 빈 공간이 아예 없으면 기본 최소 규격 반환
+        if (emptyCells.Count == 0)
+        {
+            return new Vector3(0.2f, Random.Range(0.2f, 0.8f), 0.2f);
+        }
+
+        // 2. 빈 공간 중 랜덤으로 시작점 하나 선택
+        Vector2Int startCell = emptyCells[Random.Range(0, emptyCells.Count)];
+        int startX = startCell.x;
+        int startZ = startCell.y;
+
+        // 3. 가로(X) 방향으로 최대 몇 칸 연속 비어있는지 확인 (최대 8칸 = 0.8m 제한)
+        int maxW = 0;
+        for (int x = startX; x < gridWidth; x++)
+        {
+            if (gridMap[x, startZ] == 0.0f) maxW++;
+            else break;
+            
+            if (maxW >= 8) break; 
+        }
+        int wCells = Random.Range(Mathf.Min(2, maxW), maxW + 1);
+
+        // 4. 결정된 가로 폭(wCells)을 유지하면서 세로(Z) 방향으로 몇 칸 비어있는지 확인
+        int maxD = 0;
+        for (int z = startZ; z < gridDepth; z++)
+        {
+            bool rowClear = true;
+            for (int x = startX; x < startX + wCells; x++)
+            {
+                if (gridMap[x, z] == 1.0f)
+                {
+                    rowClear = false;
+                    break;
+                }
+            }
+            if (rowClear) maxD++;
+            else break;
+
+            if (maxD >= 8) break;
+        }
+        int dCells = Random.Range(Mathf.Min(2, maxD), maxD + 1);
+
+        // 5. 실제 미터(m) 단위 크기로 변환
+        float sizeX = wCells * cellSize;
+        float sizeZ = dCells * cellSize;
+        float sizeY = Random.Range(0.2f, 0.8f); // 높이는 바닥 빈칸과 무관하므로 랜덤
+
+        return new Vector3(sizeX, sizeY, sizeZ);
+    }
 
 }

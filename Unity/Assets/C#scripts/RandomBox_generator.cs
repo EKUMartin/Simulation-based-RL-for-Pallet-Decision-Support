@@ -50,47 +50,44 @@ public class RandomBox_generator : MonoBehaviour
     }
     */
 
-    public GameObject GenerateBox(int index) //박스 생성할 때 호출하는 함수
+    // 🌟 타겟 선반(targetShelf)을 매개변수로 받을 수 있도록 수정
+    public GameObject GenerateBox(int index, GridManager targetShelf = null) 
     {
         if (boxPrefab == null) return null;
 
-        //랜덤 규격 결정 (0.2 ~ 1.0)
-        float w = Random.Range(0.2f, 0.8f);
-        float h = Random.Range(0.2f, 0.8f);
-        float d = Random.Range(0.2f, 0.8f);
+        float w, h, d;
 
-        //부피에 비례하는 무게 계산 (밀도 상수 10f)
+        // 🌟 타겟 선반이 전달되었다면, 남은 빈 공간에 딱 맞는 크기 역산
+        if (targetShelf != null)
+        {
+            Vector3 fittingSize = targetShelf.GetFittingBoxSize();
+            w = fittingSize.x;
+            h = fittingSize.y;
+            d = fittingSize.z;
+        }
+        else
+        {
+            // 기존 랜덤 방식
+            w = Random.Range(0.2f, 0.8f);
+            h = Random.Range(0.2f, 0.8f);
+            d = Random.Range(0.2f, 0.8f);
+        }
+
+        // 부피에 비례하는 무게 계산 (밀도 상수 30f)
         float weight = (w * h * d) * 30f;
 
-        //프리팹 인스턴스 생성
         GameObject box = Instantiate(boxPrefab);
 
-        // ✅ [좌표 분산 로직 수정] 소용돌이(Spiral) 형태로 빙글빙글 퍼지게 배치
-        // index가 커질수록 회전 각도(angle)와 중심으로부터의 거리(radius)가 증가함
-        float angle = index * (Mathf.PI * 2f / 5f); // 각도: 약 72도씩 회전
-        float radius = index * 0.4f;                // 거리: 0.4m씩 바깥으로 퍼짐
+        // 좌표 분산 로직 (기존 코드 그대로 유지)
+        float angle = index * (Mathf.PI * 2f / 5f); 
+        float radius = index * 0.4f;                
 
         float currentX = 0f + (Mathf.Cos(angle) * radius);
         float currentZ = -16f + (Mathf.Sin(angle) * radius);
 
-        // 높이(Y)는 1.5 유지
         box.transform.position = new Vector3(currentX, 1.5f, currentZ);
         box.transform.localScale = new Vector3(w, h, d);
         
-        /* 수정 (사용제외)
-        //정적 변수에 최신 데이터 기록
-        lastW = w;
-        lastH = h;
-        lastD = d;
-        lastWeight = weight;
-        isDataNew = true;
-
-        // 콘솔 로그 출력 (무게 단위 kg 명시)
-        Debug.Log($"[Memory Update] Box {index} -> W:{w:F2}, H:{h:F2}, D:{d:F2}, Weight:{weight:F2}kg");
-        Debug.Log($"[Size Check] Box X length: {w:F2}");
-        Debug.Log($"[Size Check] Box Y length: {h:F2}");
-        */
-        //Box 스크립트 연동 및 에이전트 전달용 데이터 세팅
         Box boxScript = box.GetComponent<Box>();
         if (boxScript == null) 
         {
@@ -99,10 +96,8 @@ public class RandomBox_generator : MonoBehaviour
         
         boxScript.size = new Vector3(w, h, d);
         boxScript.weight = weight;
-        // 1층/2층 구분용 타겟 선반 ID 지정 로직 
         boxScript.targetShelfID = Random.Range(0, 2);
 
-        // 생성된 박스 오브젝트를 WarehouseAgent로 반환
         return box;
     }
 }

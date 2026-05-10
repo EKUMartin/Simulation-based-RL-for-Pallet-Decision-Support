@@ -47,13 +47,12 @@ class connect_unity:
         box_x = obs[-4] 
         box_y = obs[-3]
         box_z = obs[-2]
-        # target_shelf_id = obs[-1] (유니티에서 전체 층을 탐색하므로 이제 파이썬에선 쓰지 않지만 통신 규격을 위해 수신은 합니다)
         
         grid_area = cls.shelf_w * cls.shelf_h
         box_weight = float(box_x * box_y * box_z * 10.0)
         cls.current_weight = box_weight
 
-        # 🌟 유니티가 딱 1개 층만 보냈으므로, 처음부터 grid_area까지만 자르면 됩니다.
+        # 유니티가 딱 1개 층만 보냈으므로, 처음부터 grid_area까지만 자름
         grid_flat = obs[:grid_area] 
         current_state = np.reshape(grid_flat, (cls.shelf_h, cls.shelf_w)).tolist()
         cls.last_valid_state = current_state
@@ -78,7 +77,7 @@ class connect_unity:
             # 연속형 데이터 사용 안 함
             continuous_actions = np.empty((1, 0), dtype=np.float32)
             
-            # 🌟 [X좌표, Z좌표, 회전여부] 딱 3개의 이산형(정수) 데이터만 포장
+            # [X좌표, Z좌표, 회전여부] 딱 3개의 이산형(정수) 데이터만 포장
             discrete_actions = np.array([[x, y, 1 if rotation else 0]], dtype=np.int32)
 
             action_tuple = ActionTuple(

@@ -3324,12 +3324,12 @@ MonoBehaviour:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
-  shelf0_Floor1: {fileID: 1994669943}
-  shelf0_Floor2: {fileID: 876161388}
-  shelf1_Floor1: {fileID: 1066587321}
-  shelf1_Floor2: {fileID: 1604564889}
+  allShelves:
+  - {fileID: 1994669943}
+  - {fileID: 876161388}
+  - {fileID: 1066587321}
+  - {fileID: 1604564889}
   boxManager: {fileID: 304742299}
-  totalBoxesToPlace: 8
 --- !u!114 &1329013180
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3358,7 +3358,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 1676
+    VectorObservationSize: 1675
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 0
