@@ -34,33 +34,46 @@ public class WarehouseAgent : Agent
 
     private void GenerateBoxes()
     {
+    // 🌟 1. 층 결정을 위해 임시 리스트 사용
+        List<Box> tempBoxes = new List<Box>();
+
         for (int i = 0; i < 8; i++)
         {
-            GameObject newBox = boxManager.GenerateBox(i);
-            boxesToPlace.Add(newBox.GetComponent<Box>());
-            allSpawnedBoxes.Add(newBox);
+        // 상자 생성 (아직 타겟 층은 랜덤 상태)
+            GameObject newBoxObj = boxManager.GenerateBox(i);
+            Box boxScript = newBoxObj.GetComponent<Box>();
+
+        // 🌟 2. 부피에 따라 타겟 선반 고정 (0.3f는 기준값, 조정 가능)
+            float volume = boxScript.size.x * boxScript.size.y * boxScript.size.z;
+            if (volume > 0.3f) {
+             boxScript.targetShelfID = Random.Range(0, 2); // 0, 1번 선반 (아래층)
+            } else {
+            // 선반이 4개라면 2, 3번 배정 (allShelves 개수에 따라 조정)
+                boxScript.targetShelfID = Random.Range(2, Mathf.Min(4, allShelves.Count)); 
+            }
+
+            tempBoxes.Add(boxScript);
+            allSpawnedBoxes.Add(newBoxObj);
         }
+
+    // 🌟 3. 부피가 큰 순서대로 내림차순 정렬 (큰 상자를 먼저 파이썬에 보냄)
+        tempBoxes.Sort((a, b) => (b.size.x * b.size.z).CompareTo(a.size.x * a.size.z));
+    
+    // 정렬된 리스트를 대기열에 추가
+        boxesToPlace.AddRange(tempBoxes);
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
         if (currentBoxIndex >= boxesToPlace.Count) return;
 
-        //가장 비어있는 층 하나를 '선택'해서 그 지도만 보냄
-        int bestShelf = 0;
-        float minUsage = float.MaxValue;
-        for (int i = 0; i < allShelves.Count; i++)
-        {
-            float usage = GetUsage(allShelves[i]);
-            if (usage < minUsage) { minUsage = usage; bestShelf = i; }
-        }
-        selectedShelfIndex = bestShelf;
+    // 가장 비어있는 층이 아니라, 상자에 미리 정해진 층의 인덱스를 사용
+        selectedShelfIndex = boxesToPlace[currentBoxIndex].targetShelfID;
 
-        // 파이썬에게는 이 층의 지도만 전송
+    // 파이썬에게는 해당 층의 지도 데이터만 전송
         float[] gridData = allShelves[selectedShelfIndex].GetGridData();
         foreach (float data in gridData) sensor.AddObservation(data);
 
-        // 상자 크기 정보 전송
         sensor.AddObservation(boxesToPlace[currentBoxIndex].size);
     }
 
@@ -76,7 +89,7 @@ public class WarehouseAgent : Agent
         Vector3 size = currentBox.size;
         if (rot == 1) size = new Vector3(size.z, size.y, size.x);
 
-        //파이썬이 준 좌표를 '아까 그 층'에 그대로 적용
+        //파이썬이 준 좌표를 그대로 적용
         if (allShelves[selectedShelfIndex].TryPlaceBox(x, z, size, out Vector3 pos))
         {
             currentBox.transform.position = pos;
@@ -92,10 +105,4 @@ public class WarehouseAgent : Agent
         if (currentBoxIndex >= boxesToPlace.Count) GenerateBoxes();
     }
 
-    private float GetUsage(GridManager shelf)
-    {
-        float usage = 0;
-        foreach (float v in shelf.gridMap) usage += v;
-        return usage;
-    }
 }
