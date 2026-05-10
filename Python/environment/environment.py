@@ -56,61 +56,17 @@ class Environment:
         return self.current_state, self.current_feasibility_map, step_reward, self.done
     def reset(self):
         cu.reset()
-        self.shelf, self.current_state, raw_boxes = cu.get_observation()
-        self.boxes = self.filter_boxes_with_feasibility(self.current_state, raw_boxes)
+        self.shelf, self.current_state, self.boxes = cu.get_observation()
         
         self.current_box = 0
         self.done = False
         self.packed_boxes = []
 
-        if len(self.boxes) == 0:
-            self.done = True
-            fallback_fm = np.zeros(self.shelf[0] * self.shelf[1] * 2)
-            return self.current_state, fallback_fm
-
         box = self.boxes[self.current_box]
         self.current_feasibility_map = self.get_feasibility_map(self.current_state, box)
         
         return self.current_state, self.current_feasibility_map
-    def filter_boxes_with_feasibility(self, initial_state, raw_boxes):
-
-        temp_state = np.array(initial_state)
-        valid_boxes = []
-        grid_height, grid_width = temp_state.shape
-
-        for box in raw_boxes:
-            box_w, box_h = box[0], box[1]
-
-            f_map = self.get_feasibility_map(temp_state, box)
-
-            if 0 in f_map:
-                valid_boxes.append(box)
-
-                f_map_norotate = f_map[:grid_height * grid_width].reshape((grid_height, grid_width))
-                f_map_rotate = f_map[grid_height * grid_width:].reshape((grid_height, grid_width))
-                
-                placed = False
-
-                for y in range(grid_height):
-                    for x in range(grid_width):
-                        if f_map_norotate[y, x] == 0:
-                            temp_state[y : y + box_h, x : x + box_w] = 1
-                            placed = True
-                            break
-                    if placed: break
-
-                if not placed:
-                    for y in range(grid_height):
-                        for x in range(grid_width):
-                            if f_map_rotate[y, x] == 0:
-                                temp_state[y : y + box_w, x : x + box_h] = 1
-                                placed = True
-                                break
-                        if placed: break
-            else:
-                pass
-
-        return valid_boxes
+    
     def get_state(self):
         """
         유니티 연결 함수에서 받고
@@ -142,7 +98,7 @@ class Environment:
                 length=self.boxes[self.current_box+i][1]
                 total_size+=width*length
             penalty=space_left-total_size
-            return -penalty*0.5
+            return -penalty*0.005
         
         else:
             # time=cu.get_result_episode()
@@ -152,7 +108,7 @@ class Environment:
             # avg_weight=np.average(weight)+1e-9
             # reward=(space_utilized-space_left)/(total_time/avg_weight)
             reward=space_utilized-space_left
-            return reward*0.5
+            return reward*0.005
 
     
     def get_stepwise_reward(self):
