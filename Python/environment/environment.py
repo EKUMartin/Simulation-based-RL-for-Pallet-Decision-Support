@@ -98,7 +98,7 @@ class Environment:
                 length=self.boxes[self.current_box+i][1]
                 total_size+=width*length
             penalty=space_left-total_size
-            return -penalty*0.005
+            return -penalty*0.05
         
         else:
             # time=cu.get_result_episode()
@@ -108,7 +108,7 @@ class Environment:
             # avg_weight=np.average(weight)+1e-9
             # reward=(space_utilized-space_left)/(total_time/avg_weight)
             reward=space_utilized-space_left
-            return reward*0.005
+            return reward*0.05
 
     
     def get_stepwise_reward(self):

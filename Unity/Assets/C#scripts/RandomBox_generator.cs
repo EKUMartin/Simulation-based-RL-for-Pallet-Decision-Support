@@ -93,11 +93,13 @@ public class RandomBox_generator : MonoBehaviour
         {
             boxScript = box.AddComponent<Box>();
         }
-        
-        boxScript.size = new Vector3(w, h, d);
-        boxScript.weight = weight;
-        boxScript.targetShelfID = Random.Range(0, 2);
+      
+    boxScript.size = new Vector3(w, h, d);
+    boxScript.weight = weight;
 
-        return box;
+// 우선 0번으로 초기화 (Agent에서 부피에 따라 1번 그룹 혹은 2번 그룹으로 보낼 예정)
+    boxScript.targetShelfID = Random.Range(0, 4); 
+
+    return box;
     }
 }

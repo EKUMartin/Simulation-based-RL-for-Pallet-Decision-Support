@@ -34,32 +34,35 @@ public class WarehouseAgent : Agent
 
     private void GenerateBoxes()
     {
-    // 🌟 1. 층 결정을 위해 임시 리스트 사용
         List<Box> tempBoxes = new List<Box>();
 
         for (int i = 0; i < 8; i++)
         {
-        // 상자 생성 (아직 타겟 층은 랜덤 상태)
             GameObject newBoxObj = boxManager.GenerateBox(i);
             Box boxScript = newBoxObj.GetComponent<Box>();
 
-        // 🌟 2. 부피에 따라 타겟 선반 고정 (0.3f는 기준값, 조정 가능)
             float volume = boxScript.size.x * boxScript.size.y * boxScript.size.z;
-            if (volume > 0.3f) {
-             boxScript.targetShelfID = Random.Range(0, 2); // 0, 1번 선반 (아래층)
-            } else {
-            // 선반이 4개라면 2, 3번 배정 (allShelves 개수에 따라 조정)
-                boxScript.targetShelfID = Random.Range(2, Mathf.Min(4, allShelves.Count)); 
+
+        // 기준값 0.15f
+            if (volume > 0.15f) 
+            {
+            // 무겁고 큰 박스 -> 1층부 (Element 0 또는 1번 선반)
+            // 선반1의 1층과 선반2의 1층 중 랜덤으로 골고루 들어감
+                boxScript.targetShelfID = Random.Range(0, 2); 
+            } 
+            else 
+            {
+            // 가볍고 작은 박스 -> 2층부 (Element 2 또는 3번 선반)
+            // 선반1의 2층과 선반2의 2층 중 랜덤으로 골고루 들어감
+                boxScript.targetShelfID = Random.Range(2, 4); 
             }
 
             tempBoxes.Add(boxScript);
             allSpawnedBoxes.Add(newBoxObj);
         }
-
-    // 🌟 3. 부피가 큰 순서대로 내림차순 정렬 (큰 상자를 먼저 파이썬에 보냄)
-        tempBoxes.Sort((a, b) => (b.size.x * b.size.z).CompareTo(a.size.x * a.size.z));
     
-    // 정렬된 리스트를 대기열에 추가
+    // 정렬 유지 (큰 상자부터 처리하도록)
+        tempBoxes.Sort((a, b) => (b.size.x * b.size.z).CompareTo(a.size.x * a.size.z));
         boxesToPlace.AddRange(tempBoxes);
     }
 
@@ -75,6 +78,7 @@ public class WarehouseAgent : Agent
         foreach (float data in gridData) sensor.AddObservation(data);
 
         sensor.AddObservation(boxesToPlace[currentBoxIndex].size);
+
     }
 
     public override void OnActionReceived(ActionBuffers actions)

@@ -3326,8 +3326,8 @@ MonoBehaviour:
   MaxStep: 0
   allShelves:
   - {fileID: 1994669943}
-  - {fileID: 876161388}
   - {fileID: 1066587321}
+  - {fileID: 876161388}
   - {fileID: 1604564889}
   boxManager: {fileID: 304742299}
 --- !u!114 &1329013180
