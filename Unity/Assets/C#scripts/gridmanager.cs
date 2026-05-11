@@ -145,7 +145,7 @@ public class GridManager : MonoBehaviour
                         if (canExpand) { currentMaxD++; if (currentMaxD >= 8) break; }
                     }
                     int area = w * currentMaxD;
-                    if (area > maxArea && w >= 2 && currentMaxD >= 2)
+                    if (area > maxArea && w >= 4 && currentMaxD >= 4)
                     {
                         maxArea = area; bestX = startX; bestZ = startZ; bestW = w; bestD = currentMaxD;
                     }
@@ -162,8 +162,10 @@ public class GridManager : MonoBehaviour
 
         for (int retry = 0; retry < 20; retry++)
         {
-            finalW = Random.Range(2, bestW + 1);
-            finalD = Random.Range(2, bestD + 1);
+            int maxW = Mathf.Max(4, bestW - Random.Range(0,3));
+            int maxD = Mathf.Max(4, bestD - Random.Range(0, 3));
+            finalW = Random.Range(4, maxW + 1);
+            finalD = Random.Range(4, maxD + 1);
             float baseArea = (finalW * cellSize) * (finalD * cellSize); //바닥 면적
 
             if (isLargeBox) 
