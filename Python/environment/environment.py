@@ -19,19 +19,38 @@ class Environment:
        self.history_boxes=[]
        self.done=False
        self.penalty_threshold=penalty_threshold
+       self.cumulated_step=0
     
     def step(self,action):
         """
         state받고->박스 위치 구하고->state update
         박스 개수가 끝날 때까지
         """
+        x, y, rotation = action
+        box = self.boxes[self.current_box]
+        box_w, box_h = box[0], box[1]
+        if rotation:
+            box_w, box_h = box_h, box_w
+        state = np.array(self.current_state)
+        grid_height, grid_width = state.shape
+        is_invalid = False
+        if x + box_w > grid_width or y + box_h > grid_height:
+            is_invalid = True
+        elif np.sum(state[y:y+box_h, x:x+box_w]) > 0:
+            is_invalid = True
+        if is_invalid:
+            penalty=0
+            self.done = True
+            print("####################겹침 실패!####################")
+            penalty=-1.0+self.cumulated_step
+            return self.current_state, self.current_feasibility_map, penalty, self.done
         self.update_state(action)
         self.packed_boxes.append(self.boxes[self.current_box])
-        box = self.boxes[self.current_box]
         self.action_history.append(action)
-        step_reward = (box[0] * box[1]) * 0.03#박스를 뒀을 때 보상 추가
+        step_reward = (box[0] * box[1]) * 0.0001#박스를 뒀을 때 보상 추가
+        self.cumulated_step+=step_reward
         self.current_box+=1
-        
+        # step_reward=0
 
         if self.current_box >= len(self.boxes):
             cu.execute_step(self.action_history)
@@ -57,7 +76,7 @@ class Environment:
     def reset(self):
         cu.reset()
         self.shelf, self.current_state, self.boxes = cu.get_observation()
-        
+        self.cumulated_step=0
         self.current_box = 0
         self.done = False
         self.packed_boxes = []
@@ -66,7 +85,6 @@ class Environment:
         self.current_feasibility_map = self.get_feasibility_map(self.current_state, box)
         
         return self.current_state, self.current_feasibility_map
-    
     def get_state(self):
         """
         유니티 연결 함수에서 받고
@@ -90,6 +108,7 @@ class Environment:
         total_boxes=len(self.boxes)
         space_left=(space==0).sum()
         space_utilized=(space==1).sum()
+        total_space = space.size
         total_size=0
         if self.done:
             print("####################실패!####################")
@@ -98,7 +117,7 @@ class Environment:
                 length=self.boxes[self.current_box+i][1]
                 total_size+=width*length
             penalty=space_left-total_size
-            return -penalty*0.05
+            return -penalty/total_space
         
         else:
             # time=cu.get_result_episode()
@@ -108,7 +127,7 @@ class Environment:
             # avg_weight=np.average(weight)+1e-9
             # reward=(space_utilized-space_left)/(total_time/avg_weight)
             reward=space_utilized-space_left
-            return reward*0.05
+            return reward/total_space
 
     
     def get_stepwise_reward(self):

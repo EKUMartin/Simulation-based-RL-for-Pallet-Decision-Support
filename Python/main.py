@@ -16,7 +16,7 @@ def train():
     current_state, feasibility_map = env.reset()
     SAVE_DIR = "./checkpoints"
     os.makedirs(SAVE_DIR, exist_ok=True)
-    TARGET_REWARD = 3.0
+    TARGET_REWARD = 0.85
     training_logs = []
     shelf_width = env.shelf[0]
     shelf_length = env.shelf[1]
@@ -38,7 +38,7 @@ def train():
     agent = PPOAgent(model, lr, gamma, gae_lambda, eps_clip, k_epochs, ent_coef,device=device, batch_size=batch_size)
     memory = Memory()
     
-    max_episodes = 3000
+    max_episodes = 30000
     update_timestep = 128
     timestep = 0
     reward_history = []

@@ -51,7 +51,7 @@ public class RandomBox_generator : MonoBehaviour
     */
 
     // 🌟 타겟 선반(targetShelf)을 매개변수로 받을 수 있도록 수정
-    public GameObject GenerateBox(int index, Vector3 predefinedSize, int targetShelfID) 
+    public GameObject GenerateBox(int index, Vector3 predefinedSize, int targetShelfID)
     {
         if (boxPrefab == null) return null;
 
@@ -78,8 +78,8 @@ public class RandomBox_generator : MonoBehaviour
         GameObject box = Instantiate(boxPrefab);
 
         // 좌표 분산 로직 (기존 코드 그대로 유지)
-        float angle = index * (Mathf.PI * 2f / 5f); 
-        float radius = index * 0.4f;                
+        float angle = index * (Mathf.PI * 2f / 5f);
+        float radius = index * 0.4f;
 
         float currentX = 0f + (Mathf.Cos(angle) * radius);
         float currentZ = -16f + (Mathf.Sin(angle) * radius);
@@ -96,7 +96,7 @@ public class RandomBox_generator : MonoBehaviour
         */
 
         Box boxScript = box.GetComponent<Box>();
-        if (boxScript == null) 
+        if (boxScript == null)
         {
             boxScript = box.AddComponent<Box>();
         }

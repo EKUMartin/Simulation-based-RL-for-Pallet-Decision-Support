@@ -8,9 +8,9 @@ public class GridManager : MonoBehaviour
 
     [HideInInspector] public int gridWidth;
     [HideInInspector] public int gridDepth;
-    
+
     //파이썬으로 넘길 배열 (0.0: 박스없, 1.0: 박스있, 2.0: 박스 생성할 때 grid 탐색하며 사용)
-    public float[,] gridMap; 
+    public float[,] gridMap;
 
     private BoxCollider shelfCollider;
 
@@ -32,7 +32,7 @@ public class GridManager : MonoBehaviour
         Debug.Log($"선반 그리드 세팅 완료: {gridWidth}칸 x {gridDepth}칸");
 
         //시작할 때 놓여있는 박스들을 미리 스캔
-        ScanInitialBoxes(); 
+        ScanInitialBoxes();
     }
 
     //배열 0으로 초기화
@@ -47,7 +47,7 @@ public class GridManager : MonoBehaviour
     //이미 배치된 박스를 스캔하여 그리드 맵에 반영 (1.0으로)
     public void ScanInitialBoxes()
     {
-        ResetGrid(); 
+        ResetGrid();
         Vector3 minBounds = shelfCollider.bounds.min;
 
         for (int x = 0; x < gridWidth; x++)
@@ -57,7 +57,7 @@ public class GridManager : MonoBehaviour
                 //각 칸의 중앙 X, Z 좌표
                 float posX = minBounds.x + (x * cellSize) + (cellSize / 2f);
                 float posZ = minBounds.z + (z * cellSize) + (cellSize / 2f);
-                
+
                 //선반 위쪽(y + 1m)에서 아래로 레이저를 쏴서 검사
                 Vector3 rayStart = new Vector3(posX, shelfCollider.bounds.max.y + 1f, posZ);
 
@@ -109,7 +109,7 @@ public class GridManager : MonoBehaviour
         float worldZ = minBounds.z + (startZ * cellSize) + (boxSize.z / 2f);
         //높이는 선반 바닥(y) + 박스 높이의 절반
         float worldY = shelfCollider.bounds.max.y + (boxSize.y / 2f); //높이 y값 계산
-        
+
         placePosition = new Vector3(worldX, worldY, worldZ); //최종좌표
         return true; //배치 성공
     }
@@ -162,36 +162,37 @@ public class GridManager : MonoBehaviour
 
         for (int retry = 0; retry < 20; retry++)
         {
-            int maxW = Mathf.Max(4, bestW - Random.Range(0,3));
+            int maxW = Mathf.Max(4, bestW - Random.Range(0, 3));
             int maxD = Mathf.Max(4, bestD - Random.Range(0, 3));
             finalW = Random.Range(4, maxW + 1);
             finalD = Random.Range(4, maxD + 1);
             float baseArea = (finalW * cellSize) * (finalD * cellSize); //바닥 면적
 
-            if (isLargeBox) 
+            if (isLargeBox)
             {
                 //대형 박스 부피 > 0.15
-                float minRequiredHeight = 0.15f / baseArea; 
-                
+                float minRequiredHeight = 0.15f / baseArea;
+
                 //0.1 단위로 올림 ex) 0.23 -> 0.3
-                int minHSteps = Mathf.CeilToInt(Mathf.Max(0.2f, minRequiredHeight) * 10f); 
+                int minHSteps = Mathf.CeilToInt(Mathf.Max(0.2f, minRequiredHeight) * 10f);
                 int maxHSteps = 10; // 1.0m = 10칸
 
-                if (minHSteps <= maxHSteps) 
-                {   finalH = Random.Range(minHSteps, maxHSteps + 1) * 0.1f;
+                if (minHSteps <= maxHSteps)
+                {
+                    finalH = Random.Range(minHSteps, maxHSteps + 1) * 0.1f;
                     foundValidSize = true; break;
                 }
             }
-            else 
+            else
             {
                 //소형 박스 부피 <= 0.15
                 float maxAllowedHeight = 0.149f / baseArea;
-                
+
                 int minHSteps = 2;
                 //0.1 단위로 내림
-                int maxHSteps = Mathf.FloorToInt(Mathf.Min(1.0f, maxAllowedHeight) * 10f); 
+                int maxHSteps = Mathf.FloorToInt(Mathf.Min(1.0f, maxAllowedHeight) * 10f);
 
-                if (minHSteps <= maxHSteps) 
+                if (minHSteps <= maxHSteps)
                 {
                     finalH = Random.Range(minHSteps, maxHSteps + 1) * 0.1f;
                     foundValidSize = true; break;
@@ -204,12 +205,12 @@ public class GridManager : MonoBehaviour
         {
             finalW = bestW; finalD = bestD;
             float baseArea = (finalW * cellSize) * (finalD * cellSize);
-            if (isLargeBox) 
+            if (isLargeBox)
             {
                 float h = Mathf.Clamp(0.151f / baseArea, 0.2f, 1.0f);
                 finalH = Mathf.Ceil(h * 10f) / 10f; // 0.1 단위 강제 올림
             }
-            else 
+            else
             {
                 float h = Mathf.Clamp(0.149f / baseArea, 0.2f, 1.0f);
                 finalH = Mathf.Floor(h * 10f) / 10f;
@@ -255,7 +256,7 @@ public class GridManager : MonoBehaviour
     public Vector3 GetFittingBoxSize()
     {
         System.Collections.Generic.List<Vector2Int> emptyCells = new System.Collections.Generic.List<Vector2Int>();
-        
+
         // 1. 현재 0.0f(빈 공간)인 모든 셀 좌표 수집
         for (int x = 0; x < gridWidth; x++)
         {
@@ -285,8 +286,8 @@ public class GridManager : MonoBehaviour
         {
             if (gridMap[x, startZ] == 0.0f) maxW++;
             else break;
-            
-            if (maxW >= 8) break; 
+
+            if (maxW >= 8) break;
         }
         int wCells = Random.Range(Mathf.Min(2, maxW), maxW + 1);
 

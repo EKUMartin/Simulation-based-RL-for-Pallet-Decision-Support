@@ -61,14 +61,15 @@ class ActorCritic(nn.Module):
         logits = logits_2d.view(data.size(0), -1) # 다시 flatten하여 Categorical 분포용으로 변환
 
         # Masking
-        masked_logits = logits.masked_fill(feasibility_map == 1, -1e9)
+        # masked_logits = logits.masked_fill(feasibility_map == 1, -1e9)
 
         pooled_spatial = self.critic_pool(spatial_features).view(-1, 64)
         critic_input = torch.cat((pooled_spatial, box_info), dim=1)
         value = self.critic_linear(critic_input)
         
         if is_1d:
-            masked_logits = masked_logits.squeeze(0)
+            # masked_logits = masked_logits.squeeze(0)
             value = value.squeeze(0)
-            
-        return masked_logits, value
+
+        return logits, value    
+        # return masked_logits, value
