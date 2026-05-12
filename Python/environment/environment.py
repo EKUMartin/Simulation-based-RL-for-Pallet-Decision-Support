@@ -126,7 +126,8 @@ class Environment:
             # total_time=np.sum(time_array)+1e-9
             # avg_weight=np.average(weight)+1e-9
             # reward=(space_utilized-space_left)/(total_time/avg_weight)
-            reward=space_utilized-space_left
+            # reward=space_utilized-space_left
+            reward=space_utilized
             return reward/total_space
 
     

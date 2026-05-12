@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import csv  # CSV 저장을 위한 모듈 추가
 
 def train():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -17,13 +18,9 @@ def train():
     SAVE_DIR = "./checkpoints"
     os.makedirs(SAVE_DIR, exist_ok=True)
     TARGET_REWARD = 0.85
-    training_logs = []
     shelf_width = env.shelf[0]
     shelf_length = env.shelf[1]
     grid_area = shelf_width * shelf_length
-    # box_info_size = 3 + 6
-    # box_info_size =2+6
-    # input_size = (grid_area * 2) + grid_area + box_info_size
     output_size = grid_area * 2
     
     model = ActorCritic(grid_h=shelf_length, grid_w=shelf_width, output_size=output_size).to(device)
@@ -34,8 +31,8 @@ def train():
     eps_clip = 0.2
     k_epochs = 10
     batch_size = 64
-    ent_coef=0.01
-    agent = PPOAgent(model, lr, gamma, gae_lambda, eps_clip, k_epochs, ent_coef,device=device, batch_size=batch_size)
+    ent_coef = 0.01
+    agent = PPOAgent(model, lr, gamma, gae_lambda, eps_clip, k_epochs, ent_coef, device=device, batch_size=batch_size)
     memory = Memory()
     
     max_episodes = 30000
@@ -43,10 +40,21 @@ def train():
     timestep = 0
     reward_history = []
     
+    # 🌟 CSV 파일 초기화 및 헤더 작성
+    csv_path = "training_logs.csv"
+    with open(csv_path, mode='w', newline='', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Episode", "Total_Timesteps", "Episode_Steps", "Reward", "PG_Loss", "V_Loss"])
+    
     for episode in range(1, max_episodes + 1):
         current_state, feasibility_map = env.reset()
         episode_reward = 0
         episode_steps = 0
+        
+        # 🌟 에피소드별 Loss 기록용 리스트
+        ep_pg_losses = []
+        ep_v_losses = []
+        
         while not env.done:
             timestep += 1
             episode_steps += 1
@@ -92,8 +100,6 @@ def train():
                         n_flat_fm = np.array(feasibility_map).flatten()
                         norm_n_box_w = next_box[0] / shelf_width
                         norm_n_box_h = next_box[1] / shelf_length
-                        #norm_n_box_weight = next_box[2] / 10.0
-                        #norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h, norm_n_box_weight])
                         norm_n_box_info = np.array([norm_n_box_w, norm_n_box_h])
                         n_rem_stats = env.get_remaining_stats()
                         
@@ -107,44 +113,53 @@ def train():
                         next_value = next_val_tensor.item()
                         
                 pg_loss, v_loss = agent.update(memory, next_value=next_value)
+                
+                # 🌟 업데이트 발생 시 Loss 저장
+                ep_pg_losses.append(pg_loss)
+                ep_v_losses.append(v_loss)
+                
                 memory.clear()
                 print(f"  └── [Update] Timestep: {timestep} | 에피소드: {episode} | PG Loss: {pg_loss:.4f} | Value Loss: {v_loss:.4f}")
-        print(f"Episode {episode}/{max_episodes} 완료 | 총 보상: {episode_reward:.2f}")
+                
         reward_history.append(episode_reward)
-        training_logs.append({
-            "Episode": episode,
-            "Total_Timesteps": timestep,
-            "Episode_Steps": episode_steps,
-            "Reward": episode_reward
-        })
+        print(f"Episode {episode}/{max_episodes} 완료 | 총 보상: {episode_reward:.2f}")
+        
+        # 🌟 에피소드 평균 Loss 계산 (해당 에피소드에서 업데이트가 없었을 경우 0으로 처리)
+        avg_pg_loss = sum(ep_pg_losses) / len(ep_pg_losses) if ep_pg_losses else 0.0
+        avg_v_loss = sum(ep_v_losses) / len(ep_v_losses) if ep_v_losses else 0.0
+        
+        # 🌟 매 에피소드 종료 직후 CSV 파일에 실시간 데이터 추가 (Append 모드)
+        with open(csv_path, mode='a', newline='', encoding='utf-8-sig') as f:
+            writer = csv.writer(f)
+            writer.writerow([episode, timestep, episode_steps, episode_reward, avg_pg_loss, avg_v_loss])
+            
+        # 🌟 타겟 보상 달성 시 모델 저장
         if episode_reward >= TARGET_REWARD:
             save_path = os.path.join(SAVE_DIR, f"ppo_model_ep{episode}_reward{episode_reward:.2f}.pth")
             torch.save(agent.model.state_dict(), save_path)
             print(f"🎉 목표 보상 달성! 모델 저장 완료: {save_path}")
-    
-    try:
-        df_logs = pd.DataFrame(training_logs)
-        excel_path = "training_logs.xlsx"
-        df_logs.to_excel(excel_path, index=False)
-        print(f"📊 학습 로그 엑셀 저장 완료: {excel_path}")
-    except Exception as e:
-        print(f"엑셀 저장 중 오류 발생 (openpyxl 라이브러리가 설치되어 있는지 확인하세요): {e}")
+            
+        # 🌟 1000 에피소드마다 정기 체크포인트 모델 저장
+        if episode % 1000 == 0:
+            chkpt_path = os.path.join(SAVE_DIR, f"ppo_model_checkpoint_ep{episode}.pth")
+            torch.save(agent.model.state_dict(), chkpt_path)
+            print(f"💾 1000 에피소드 정기 체크포인트 저장 완료: {chkpt_path}")
+
+    # 학습 종료 후 그래프 출력
     window_size = 10
     moving_avg = pd.Series(reward_history).rolling(window=window_size, min_periods=1).mean()
 
-    plt.figure(figsize=(10, 6)) # 그래프 크기를 약간 키워줍니다.
+    plt.figure(figsize=(10, 6))
     
-    # 1. 원본 보상 그래프 (흐리게 표시)
     plt.plot(reward_history, label='Episode Reward', alpha=0.3, color='steelblue')
-    
-    # 2. 이동 평균선 (빨간색으로 진하고 굵게 표시)
     plt.plot(moving_avg, label=f'{window_size}-Episode Moving Avg', color='red', linewidth=2)
 
     plt.title("PPO Agent Training Rewards")
     plt.xlabel("Episode")
     plt.ylabel("Reward")
-    plt.legend()            # 범례(Legend) 표시
-    plt.grid(True, alpha=0.3) # 배경에 연한 격자무늬 추가
+    plt.legend()
+    plt.grid(True, alpha=0.3)
     plt.show()
+
 if __name__ == "__main__":
     train()
