@@ -47,10 +47,10 @@ class Environment:
         self.update_state(action)
         self.packed_boxes.append(self.boxes[self.current_box])
         self.action_history.append(action)
-        # step_reward = (box[0] * box[1]) * 0.0001#박스를 뒀을 때 보상 추가
-        # self.cumulated_step+=step_reward
+        step_reward = (box[0] * box[1]) * 0.0001#박스를 뒀을 때 보상 추가
+        self.cumulated_step+=step_reward
         self.current_box+=1
-        step_reward=0
+        # step_reward=0
 
         if self.current_box >= len(self.boxes):
             cu.execute_step(self.action_history)
@@ -128,9 +128,11 @@ class Environment:
             # reward=(space_utilized-space_left)/(total_time/avg_weight)
             reward=space_utilized
             if reward/total_space>=0.85:
-                return reward/total_space
+                return total_space/reward
             else:
-                return reward/total_space-0.6
+                return reward/total_space
+            # else:
+            #     return reward/total_space-0.6
 
     
     def get_stepwise_reward(self):
