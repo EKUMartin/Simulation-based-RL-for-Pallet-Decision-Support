@@ -47,7 +47,9 @@ class Environment:
         self.update_state(action)
         self.packed_boxes.append(self.boxes[self.current_box])
         self.action_history.append(action)
-        step_reward = (box[0] * box[1]) * 0.0001#박스를 뒀을 때 보상 추가
+        total_space=np.array(self.current_state).size*4
+        # step_reward = (box[0] * box[1]) * 0.0001#박스를 뒀을 때 보상 추가
+        step_reward=(box[0] * box[1])/total_space
         self.cumulated_step+=step_reward
         self.current_box+=1
         # step_reward=0
@@ -62,15 +64,16 @@ class Environment:
             if len(self.boxes) == 0:
                 terminal_reward = self.get_terminal_reward()
                 self.done = True
-                return self.current_state, self.current_feasibility_map, step_reward + terminal_reward, self.done
-        
+                # return  self.current_state, self.current_feasibility_map, step_reward + terminal_reward, self.done
+                return self.current_state, self.current_feasibility_map, terminal_reward, self.do
         next_box = self.boxes[self.current_box]
         self.current_feasibility_map = self.get_feasibility_map(self.current_state, next_box)
         self.is_done(self.current_feasibility_map,self.boxes)
         
         if self.done:
             terminal_reward=self.get_terminal_reward()
-            return self.current_state, self.current_feasibility_map, step_reward + terminal_reward, self.done    
+            # return self.current_state, self.current_feasibility_map, step_reward + terminal_reward, self.done
+            return self.current_state, self.current_feasibility_map, terminal_reward, self.done    
         
         return self.current_state, self.current_feasibility_map, step_reward, self.done
     def reset(self):
@@ -108,16 +111,17 @@ class Environment:
         total_boxes=len(self.boxes)
         space_left=(space==0).sum()
         space_utilized=(space==1).sum()
-        total_space = space.size
+        total_space = space.size*4
         total_size=0
         if self.done:
-            print("####################실패!####################")
-            for i in range(total_boxes-self.current_box):
-                width=self.boxes[self.current_box+i][0]
-                length=self.boxes[self.current_box+i][1]
-                total_size+=width*length
-            penalty=space_left-total_size
-            return -penalty/total_space
+            # print("####################실패!####################")
+            # for i in range(total_boxes-self.current_box):
+            #     width=self.boxes[self.current_box+i][0]
+            #     length=self.boxes[self.current_box+i][1]
+            #     total_size+=width*length
+            # penalty=space_left-total_size
+            # return -penalty/total_space
+            return self.cumulated_step-1
         
         else:
             # time=cu.get_result_episode()
@@ -126,11 +130,12 @@ class Environment:
             # total_time=np.sum(time_array)+1e-9
             # avg_weight=np.average(weight)+1e-9
             # reward=(space_utilized-space_left)/(total_time/avg_weight)
-            reward=space_utilized
-            if reward/total_space>=0.85:
-                return total_space/reward
-            else:
-                return reward/total_space
+            # reward=space_utilized
+            # if reward/total_space>=0.85:
+            #     return total_space/reward
+            # else:
+            #     return reward/total_space
+            return self.cumulated_step
             # else:
             #     return reward/total_space-0.6
 
