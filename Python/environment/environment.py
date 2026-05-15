@@ -65,7 +65,7 @@ class Environment:
                 terminal_reward = self.get_terminal_reward()
                 self.done = True
                 # return  self.current_state, self.current_feasibility_map, step_reward + terminal_reward, self.done
-                return self.current_state, self.current_feasibility_map, terminal_reward, self.do
+                return self.current_state, self.current_feasibility_map, terminal_reward, self.done
         next_box = self.boxes[self.current_box]
         self.current_feasibility_map = self.get_feasibility_map(self.current_state, next_box)
         self.is_done(self.current_feasibility_map,self.boxes)
