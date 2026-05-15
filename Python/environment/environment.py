@@ -121,7 +121,7 @@ class Environment:
             #     total_size+=width*length
             # penalty=space_left-total_size
             # return -penalty/total_space
-            return self.cumulated_step-1
+            return -1
         
         else:
             # time=cu.get_result_episode()
@@ -135,7 +135,7 @@ class Environment:
             #     return total_space/reward
             # else:
             #     return reward/total_space
-            return self.cumulated_step
+            return 0.0
             # else:
             #     return reward/total_space-0.6
 
