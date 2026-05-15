@@ -47,7 +47,7 @@ class Environment:
         self.update_state(action)
         self.packed_boxes.append(self.boxes[self.current_box])
         self.action_history.append(action)
-        total_space=np.array(self.current_state).size*4
+        total_space=grid_height*grid_width*4
         # step_reward = (box[0] * box[1]) * 0.0001#박스를 뒀을 때 보상 추가
         step_reward=(box[0] * box[1])/total_space
         self.cumulated_step+=step_reward
