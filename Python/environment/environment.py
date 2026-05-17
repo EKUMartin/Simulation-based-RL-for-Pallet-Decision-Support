@@ -49,9 +49,9 @@ class Environment:
         self.action_history.append(action)
         total_space=grid_height*grid_width*4
         # step_reward = (box[0] * box[1]) * 0.0001#박스를 뒀을 때 보상 추가
-        step_reward=(box[0] * box[1])/total_space
         adjacency_bonus = self.calculate_adjacency(x, y, box_w, box_h, state) * 0.0005
-        self.cumulated_step=step_reward+adjacency_bonus
+        step_reward=(box[0] * box[1])/total_space+adjacency_bonus
+        self.cumulated_step=step_reward
         self.current_box+=1
         # step_reward=0
 
@@ -98,6 +98,14 @@ class Environment:
         self.current_feasibility_map=self.get_feasibility_map(self.current_state,self.current_box)
         
         return box,self.current_feasibility_map
+
+    def calculate_adjacency(self,x, y, box_w, box_h, state):
+        grid_height, grid_width = state.shape
+        if x == 0 or y == 0 or x + box_w == grid_width or y + box_h == grid_height:
+            return 1
+        if np.any(state[y : y+box_h, x-1] == 1) or np.any(state[y : y+box_h, x+box_w] == 1) or np.any(state[y-1, x : x+box_w] == 1) or np.any(state[y+box_h, x : x+box_w] == 1): 
+            return 1
+        return 0
 
 
 
