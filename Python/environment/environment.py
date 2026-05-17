@@ -50,7 +50,8 @@ class Environment:
         total_space=grid_height*grid_width*4
         # step_reward = (box[0] * box[1]) * 0.0001#박스를 뒀을 때 보상 추가
         step_reward=(box[0] * box[1])/total_space
-        self.cumulated_step+=step_reward
+        adjacency_bonus = self.calculate_adjacency(x, y, box_w, box_h, state) * 0.0005
+        self.cumulated_step=step_reward+adjacency_bonus
         self.current_box+=1
         # step_reward=0
 
@@ -121,7 +122,8 @@ class Environment:
             #     total_size+=width*length
             # penalty=space_left-total_size
             # return -penalty/total_space
-            return -1
+            unpacked_area = sum([b[0]*b[1] for b in self.boxes[self.current_box:]])
+            return -(unpacked_area / total_space)
         
         else:
             # time=cu.get_result_episode()

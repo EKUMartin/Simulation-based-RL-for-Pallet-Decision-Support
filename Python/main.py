@@ -25,13 +25,13 @@ def train():
     
     model = ActorCritic(grid_h=shelf_length, grid_w=shelf_width, output_size=output_size).to(device)
     
-    lr = 0.0003
+    lr = 1e-4
     gamma = 0.99
     gae_lambda = 0.95
     eps_clip = 0.2
-    k_epochs = 10
+    k_epochs = 4
     batch_size = 64
-    ent_coef = 0.01
+    ent_coef = 1e-4
     agent = PPOAgent(model, lr, gamma, gae_lambda, eps_clip, k_epochs, ent_coef, device=device, batch_size=batch_size)
     memory = Memory()
     
